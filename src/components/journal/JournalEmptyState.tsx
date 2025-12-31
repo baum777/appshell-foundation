@@ -1,25 +1,58 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { BookOpen, Plus } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 
 interface JournalEmptyStateProps {
-  type: "all" | "segment";
+  type: "all" | "segment" | "search";
   segmentName?: string;
+  onLogEntry?: () => void;
+  onClearSearch?: () => void;
 }
 
-export function JournalEmptyState({ type, segmentName }: JournalEmptyStateProps) {
-  const navigate = useNavigate();
-
-  if (type === "segment") {
+export function JournalEmptyState({ type, segmentName, onLogEntry, onClearSearch }: JournalEmptyStateProps) {
+  if (type === "search") {
     return (
       <Card className="bg-card/50 border-border/50">
         <CardContent className="flex flex-col items-center justify-center py-8 px-6 text-center">
-          <p className="text-sm text-muted-foreground">
-            {segmentName === "pending"
-              ? "No pending entries — you're clean."
-              : `No ${segmentName} entries yet.`}
+          <p className="text-sm text-muted-foreground mb-4">
+            No entries match your search.
           </p>
+          {onClearSearch && (
+            <Button variant="outline" size="sm" onClick={onClearSearch}>
+              Clear search
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (type === "segment") {
+    const getMessage = () => {
+      switch (segmentName) {
+        case "pending":
+          return "No pending entries — you're clean.";
+        case "confirmed":
+          return "No confirmed entries yet.";
+        case "archived":
+          return "Nothing archived.";
+        default:
+          return `No ${segmentName} entries yet.`;
+      }
+    };
+
+    return (
+      <Card className="bg-card/50 border-border/50">
+        <CardContent className="flex flex-col items-center justify-center py-8 px-6 text-center">
+          <p className="text-sm text-muted-foreground mb-4">
+            {getMessage()}
+          </p>
+          {onLogEntry && (
+            <Button onClick={onLogEntry}>
+              <Plus className="h-4 w-4 mr-2" />
+              Log entry
+            </Button>
+          )}
         </CardContent>
       </Card>
     );
@@ -40,10 +73,12 @@ export function JournalEmptyState({ type, segmentName }: JournalEmptyStateProps)
           trading history and learn from your decisions.
         </p>
 
-        <Button onClick={() => navigate("/journal")}>
-          <Plus className="h-4 w-4 mr-2" />
-          Log your first entry
-        </Button>
+        {onLogEntry && (
+          <Button onClick={onLogEntry}>
+            <Plus className="h-4 w-4 mr-2" />
+            Log your first entry
+          </Button>
+        )}
       </CardContent>
     </Card>
   );

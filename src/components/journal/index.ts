@@ -4,6 +4,7 @@ export { JournalSegmentedControl, type JournalView } from './JournalSegmentedCon
 export { JournalSearchBar } from './JournalSearchBar';
 export { JournalEntryRow } from './JournalEntryRow';
 export { JournalConfirmModal } from './JournalConfirmModal';
+export { JournalCreateDialog, type CreateEntryPayload } from './JournalCreateDialog';
 export { JournalArchiveDialog } from './JournalArchiveDialog';
 export { JournalDeleteDialog } from './JournalDeleteDialog';
 export { JournalEmptyState } from './JournalEmptyState';

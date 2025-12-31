@@ -4,7 +4,7 @@ import { PageContainer } from "@/components/layout/PageContainer";
 import { useJournalStub, type ConfirmPayload } from "@/stubs/hooks";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, RefreshCw } from "lucide-react";
+import { AlertCircle, RefreshCw, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   WalletGuard,
@@ -13,11 +13,13 @@ import {
   JournalSearchBar,
   JournalEntryRow,
   JournalConfirmModal,
+  JournalCreateDialog,
   JournalArchiveDialog,
   JournalDeleteDialog,
   JournalEmptyState,
   JournalSkeleton,
   type JournalView,
+  type CreateEntryPayload,
 } from "@/components/journal";
 import type { JournalEntryStub } from "@/stubs/contracts";
 
@@ -26,6 +28,7 @@ export default function Journal() {
   const {
     pageState,
     entries,
+    setEntries,
     confirmEntry,
     archiveEntry,
     deleteEntry,
@@ -33,19 +36,21 @@ export default function Journal() {
   } = useJournalStub();
 
   // Wallet guard state (stub)
-  const [isWalletConnected, setIsWalletConnected] = useState(true);
+  const [isWalletConnected, setIsWalletConnected] = useState(false);
 
   // View state
   const [activeView, setActiveView] = useState<JournalView>("pending");
   const [searchQuery, setSearchQuery] = useState("");
 
   // Dialog states
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [confirmModalEntry, setConfirmModalEntry] = useState<JournalEntryStub | null>(null);
   const [archiveDialogEntry, setArchiveDialogEntry] = useState<JournalEntryStub | null>(null);
   const [deleteDialogEntry, setDeleteDialogEntry] = useState<JournalEntryStub | null>(null);
 
   // Highlight state
   const [highlightedEntryId, setHighlightedEntryId] = useState<string | null>(null);
+  const [entryNotFound, setEntryNotFound] = useState<string | null>(null);
   const entryRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const urlProcessedRef = useRef(false);
 
@@ -80,7 +85,7 @@ export default function Journal() {
     return result;
   }, [entries, activeView, searchQuery]);
 
-  // Handle URL ?view= sync
+  // Handle URL ?view= sync on initial load
   useEffect(() => {
     const viewParam = searchParams.get("view") as JournalView | null;
     if (viewParam && ["pending", "confirmed", "archived"].includes(viewParam)) {
@@ -107,9 +112,13 @@ export default function Journal() {
 
     // Find the entry
     const entry = entries.find((e) => e.id === entryId);
-    if (!entry) return;
+    if (!entry) {
+      setEntryNotFound(entryId);
+      return;
+    }
 
     urlProcessedRef.current = true;
+    setEntryNotFound(null);
 
     // Switch to correct segment if needed
     if (entry.status !== activeView) {
@@ -127,27 +136,86 @@ export default function Journal() {
         ref.scrollIntoView({ behavior: "smooth", block: "center" });
       }
 
-      // Remove highlight after 3 seconds
+      // Remove highlight after 1.5 seconds
       setTimeout(() => {
         setHighlightedEntryId(null);
-      }, 3000);
+      }, 1500);
     }, 100);
   }, [entries, searchParams, activeView, setSearchParams]);
+
+  // Handle row click - update URL with entry param
+  const handleRowClick = useCallback((id: string) => {
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set("entry", id);
+    setSearchParams(newParams, { replace: true });
+
+    // Highlight the clicked entry
+    setHighlightedEntryId(id);
+    setTimeout(() => {
+      setHighlightedEntryId(null);
+    }, 1500);
+  }, [searchParams, setSearchParams]);
+
+  // Clear entry not found
+  const handleClearEntryNotFound = useCallback(() => {
+    setEntryNotFound(null);
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete("entry");
+    setSearchParams(newParams, { replace: true });
+  }, [searchParams, setSearchParams]);
+
+  // Handle create entry
+  const handleCreateEntry = useCallback((payload: CreateEntryPayload) => {
+    const newEntry: JournalEntryStub = {
+      id: `entry-${Date.now()}`,
+      side: payload.side === "neutral" ? "BUY" : payload.side,
+      status: "pending",
+      timestamp: new Date().toISOString(),
+      summary: payload.summary,
+    };
+    setEntries((prev) => [newEntry, ...prev]);
+    toast.success("Entry logged");
+    // BACKEND_TODO: persist entry + auto-capture + AI enrich
+  }, [setEntries]);
 
   // Handlers
   const handleConfirm = (id: string, payload: ConfirmPayload) => {
     confirmEntry(id, payload);
     toast.success("Entry confirmed");
+
+    // Clear selection if confirming the selected entry
+    const entryParam = searchParams.get("entry");
+    if (entryParam === id) {
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete("entry");
+      setSearchParams(newParams, { replace: true });
+    }
   };
 
   const handleArchive = (id: string, reason: string) => {
     archiveEntry(id, reason);
     toast.success("Entry archived");
+
+    // Clear selection if archiving the selected entry
+    const entryParam = searchParams.get("entry");
+    if (entryParam === id) {
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete("entry");
+      setSearchParams(newParams, { replace: true });
+    }
   };
 
   const handleDelete = (id: string) => {
     deleteEntry(id);
     toast.success("Entry deleted");
+
+    // Clear selection if deleting the selected entry
+    const entryParam = searchParams.get("entry");
+    if (entryParam === id) {
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete("entry");
+      setSearchParams(newParams, { replace: true });
+    }
   };
 
   const handleRestore = (id: string) => {
@@ -160,10 +228,8 @@ export default function Journal() {
     setTimeout(() => pageState.setState("ready"), 1000);
   };
 
-  const handleWalletConnect = () => {
-    // BACKEND_TODO: wallet connect integration
-    setIsWalletConnected(true);
-    toast.success("Wallet connected");
+  const handleDemoMode = () => {
+    toast.info("Demo mode activated");
   };
 
   // Set ref for entry row
@@ -173,6 +239,10 @@ export default function Journal() {
     } else {
       entryRefs.current.delete(id);
     }
+  }, []);
+
+  const handleOpenCreateDialog = useCallback(() => {
+    setIsCreateDialogOpen(true);
   }, []);
 
   // Loading state
@@ -213,14 +283,31 @@ export default function Journal() {
   // Empty state (no entries at all)
   const isCompletelyEmpty = entries.length === 0;
 
+  // Determine if search returned no results
+  const isSearchEmpty = searchQuery.trim() && filteredEntries.length === 0;
+
   return (
     <PageContainer testId="page-journal">
-      <WalletGuard isConnected={isWalletConnected} onConnect={handleWalletConnect}>
+      <WalletGuard isConnected={isWalletConnected} onDemoMode={handleDemoMode}>
         <div className="space-y-6">
-          <JournalHeader entries={entries} />
+          <JournalHeader entries={entries} onLogEntry={handleOpenCreateDialog} />
+
+          {/* Entry not found alert */}
+          {entryNotFound && (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription className="flex items-center justify-between">
+                <span>Entry "{entryNotFound}" not found in journal.</span>
+                <Button variant="outline" size="sm" onClick={handleClearEntryNotFound}>
+                  <X className="h-4 w-4 mr-2" />
+                  Clear
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
 
           {isCompletelyEmpty ? (
-            <JournalEmptyState type="all" />
+            <JournalEmptyState type="all" onLogEntry={handleOpenCreateDialog} />
           ) : (
             <>
               <JournalSegmentedControl
@@ -231,8 +318,17 @@ export default function Journal() {
 
               <JournalSearchBar value={searchQuery} onChange={setSearchQuery} />
 
-              {filteredEntries.length === 0 ? (
-                <JournalEmptyState type="segment" segmentName={activeView} />
+              {isSearchEmpty ? (
+                <JournalEmptyState 
+                  type="search" 
+                  onClearSearch={() => setSearchQuery("")} 
+                />
+              ) : filteredEntries.length === 0 ? (
+                <JournalEmptyState 
+                  type="segment" 
+                  segmentName={activeView} 
+                  onLogEntry={handleOpenCreateDialog}
+                />
               ) : (
                 <div className="space-y-3">
                   {filteredEntries.map((entry) => (
@@ -241,13 +337,14 @@ export default function Journal() {
                       ref={(el) => setEntryRef(entry.id, el)}
                       entry={entry}
                       isHighlighted={entry.id === highlightedEntryId}
+                      onRowClick={handleRowClick}
                       onConfirm={
                         entry.status === "pending"
                           ? () => setConfirmModalEntry(entry)
                           : undefined
                       }
                       onArchive={
-                        entry.status === "pending"
+                        entry.status === "pending" || entry.status === "confirmed"
                           ? () => setArchiveDialogEntry(entry)
                           : undefined
                       }
@@ -266,6 +363,12 @@ export default function Journal() {
         </div>
 
         {/* Dialogs */}
+        <JournalCreateDialog
+          isOpen={isCreateDialogOpen}
+          onClose={() => setIsCreateDialogOpen(false)}
+          onCreate={handleCreateEntry}
+        />
+
         <JournalConfirmModal
           entry={confirmModalEntry}
           isOpen={!!confirmModalEntry}

@@ -25,6 +25,7 @@ interface JournalEntryRowProps {
   onArchive?: () => void;
   onDelete?: () => void;
   onRestore?: () => void;
+  onRowClick?: (id: string) => void;
 }
 
 function getStatusText(entry: JournalEntryStub): string {
@@ -39,7 +40,7 @@ function getStatusText(entry: JournalEntryStub): string {
 }
 
 export const JournalEntryRow = forwardRef<HTMLDivElement, JournalEntryRowProps>(
-  ({ entry, isHighlighted, onConfirm, onArchive, onDelete, onRestore }, ref) => {
+  ({ entry, isHighlighted, onConfirm, onArchive, onDelete, onRestore, onRowClick }, ref) => {
     const [isExpanded, setIsExpanded] = useState(false);
 
     const timeAgo = formatDistanceToNow(new Date(entry.timestamp), {
@@ -48,43 +49,47 @@ export const JournalEntryRow = forwardRef<HTMLDivElement, JournalEntryRowProps>(
 
     const statusText = getStatusText(entry);
 
+    const handleRowClick = () => {
+      onRowClick?.(entry.id);
+    };
+
     return (
       <Card
         ref={ref}
         className={cn(
           "bg-card/50 border-border/50 transition-all duration-300",
-          isHighlighted && "ring-2 ring-primary ring-offset-2 ring-offset-background"
+          isHighlighted && "ring-2 ring-primary ring-offset-2 ring-offset-background bg-primary/5"
         )}
       >
         <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
           <CardContent className="p-4">
             <div className="flex items-start justify-between gap-3">
-              <CollapsibleTrigger asChild>
-                <button
-                  className="flex-1 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm"
-                  aria-label={isExpanded ? "Collapse entry" : "Expand entry"}
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <Badge
-                      variant={entry.side === "BUY" ? "default" : "secondary"}
-                      className="text-xs"
-                    >
-                      {entry.side}
+              <button
+                type="button"
+                className="flex-1 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm"
+                onClick={handleRowClick}
+                aria-label={`Select entry: ${entry.summary.slice(0, 50)}`}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <Badge
+                    variant={entry.side === "BUY" ? "default" : "secondary"}
+                    className="text-xs"
+                  >
+                    {entry.side}
+                  </Badge>
+                  {entry.status === "pending" && (
+                    <Badge variant="outline" className="text-xs">
+                      {statusText}
                     </Badge>
-                    {entry.status === "pending" && (
-                      <Badge variant="outline" className="text-xs">
-                        {statusText}
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-sm text-foreground line-clamp-2">
-                    {entry.summary}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {timeAgo}
-                  </p>
-                </button>
-              </CollapsibleTrigger>
+                  )}
+                </div>
+                <p className="text-sm text-foreground line-clamp-2">
+                  {entry.summary}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {timeAgo}
+                </p>
+              </button>
 
               <div className="flex items-center gap-1">
                 <CollapsibleTrigger asChild>
@@ -92,7 +97,8 @@ export const JournalEntryRow = forwardRef<HTMLDivElement, JournalEntryRowProps>(
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8"
-                    aria-label={isExpanded ? "Collapse" : "Expand"}
+                    aria-expanded={isExpanded}
+                    aria-label={isExpanded ? "Collapse details" : "Expand details"}
                   >
                     {isExpanded ? (
                       <ChevronUp className="h-4 w-4" />
@@ -120,7 +126,7 @@ export const JournalEntryRow = forwardRef<HTMLDivElement, JournalEntryRowProps>(
                         Confirm
                       </DropdownMenuItem>
                     )}
-                    {entry.status === "pending" && onArchive && (
+                    {(entry.status === "pending" || entry.status === "confirmed") && onArchive && (
                       <DropdownMenuItem onClick={onArchive}>
                         <Archive className="h-4 w-4 mr-2" />
                         Archive

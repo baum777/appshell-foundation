@@ -1,17 +1,28 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Wallet } from "lucide-react";
+import { Wallet, Settings, Play } from "lucide-react";
 
 interface WalletGuardProps {
   isConnected: boolean;
-  onConnect: () => void;
+  onDemoMode?: () => void;
   children: React.ReactNode;
 }
 
-export function WalletGuard({ isConnected, onConnect, children }: WalletGuardProps) {
-  if (isConnected) {
+export function WalletGuard({ isConnected, onDemoMode, children }: WalletGuardProps) {
+  const navigate = useNavigate();
+  const [demoModeActive, setDemoModeActive] = useState(false);
+
+  // If connected or demo mode active, render children
+  if (isConnected || demoModeActive) {
     return <>{children}</>;
   }
+
+  const handleDemoMode = () => {
+    setDemoModeActive(true);
+    onDemoMode?.();
+  };
 
   return (
     <div className="flex items-center justify-center min-h-[60vh]">
@@ -25,14 +36,24 @@ export function WalletGuard({ isConnected, onConnect, children }: WalletGuardPro
             Connect your wallet
           </h2>
           <p className="text-sm text-muted-foreground mb-6 max-w-sm">
-            Connect your wallet to access your trading journal and track your entries.
+            Connect your wallet to unlock journal capture and track your trading entries.
           </p>
           
-          <Button onClick={onConnect} size="lg">
-            <Wallet className="h-4 w-4 mr-2" />
-            Connect Wallet
-          </Button>
-          {/* BACKEND_TODO: wallet connect integration */}
+          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+            <Button onClick={() => navigate("/settings")} size="lg">
+              <Settings className="h-4 w-4 mr-2" />
+              Go to Settings
+            </Button>
+            <Button 
+              variant="outline" 
+              size="lg" 
+              onClick={handleDemoMode}
+            >
+              <Play className="h-4 w-4 mr-2" />
+              Continue in demo mode
+            </Button>
+          </div>
+          {/* BACKEND_TODO: wire real wallet connection state */}
         </CardContent>
       </Card>
     </div>
