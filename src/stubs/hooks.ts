@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import type {
   UserStub,
   AlertStub,
@@ -6,7 +6,9 @@ import type {
   LessonStub,
   WatchItemStub,
   OracleStub,
-  DashboardMetricStub,
+  OverviewCardStub,
+  NextActionStub,
+  KpiTileStub,
   RecentActivityStub,
 } from './contracts';
 import { usePageState, type UsePageStateReturn } from './pageState';
@@ -16,7 +18,9 @@ import {
   makeLessons,
   makeWatchlist,
   makeOracle,
-  makeDashboardMetrics,
+  makeOverviewCards,
+  makeNextActions,
+  makeKpiTiles,
   makeRecentActivity,
 } from './fixtures';
 
@@ -39,18 +43,39 @@ export function useUserStub(): UseUserStubReturn {
 // Dashboard stub hook
 export interface UseDashboardStubReturn {
   pageState: UsePageStateReturn;
-  metrics: DashboardMetricStub[];
-  recentActivity: RecentActivityStub[];
-  setMetrics: React.Dispatch<React.SetStateAction<DashboardMetricStub[]>>;
-  setRecentActivity: React.Dispatch<React.SetStateAction<RecentActivityStub[]>>;
+  hasData: boolean;
+  setHasData: (value: boolean) => void;
+  overviewCards: OverviewCardStub[];
+  kpis: KpiTileStub[];
+  nextActions: NextActionStub[];
+  recentEntries: RecentActivityStub[];
+  setOverviewCards: React.Dispatch<React.SetStateAction<OverviewCardStub[]>>;
+  setKpis: React.Dispatch<React.SetStateAction<KpiTileStub[]>>;
+  setNextActions: React.Dispatch<React.SetStateAction<NextActionStub[]>>;
+  setRecentEntries: React.Dispatch<React.SetStateAction<RecentActivityStub[]>>;
 }
 
 export function useDashboardStub(): UseDashboardStubReturn {
   const pageState = usePageState('ready');
-  const [metrics, setMetrics] = useState<DashboardMetricStub[]>(makeDashboardMetrics());
-  const [recentActivity, setRecentActivity] = useState<RecentActivityStub[]>(makeRecentActivity(5));
+  const [hasData, setHasData] = useState(true);
+  const [overviewCards, setOverviewCards] = useState<OverviewCardStub[]>(makeOverviewCards());
+  const [kpis, setKpis] = useState<KpiTileStub[]>(makeKpiTiles());
+  const [nextActions, setNextActions] = useState<NextActionStub[]>(makeNextActions());
+  const [recentEntries, setRecentEntries] = useState<RecentActivityStub[]>(makeRecentActivity(5));
 
-  return { pageState, metrics, recentActivity, setMetrics, setRecentActivity };
+  return {
+    pageState,
+    hasData,
+    setHasData,
+    overviewCards,
+    kpis,
+    nextActions,
+    recentEntries,
+    setOverviewCards,
+    setKpis,
+    setNextActions,
+    setRecentEntries,
+  };
 }
 
 // Alerts stub hook

@@ -61,3 +61,33 @@ export interface RecentActivityStub {
   description: string;
   timestamp: string;
 }
+
+// Dashboard overview cards
+export interface OverviewCardStub {
+  id: string;
+  type: 'today' | 'alerts' | 'journal';
+  title: string;
+  summary: string;
+  badge?: string;
+  count?: number;
+  link: string;
+}
+
+// Dashboard next actions
+export interface NextActionStub {
+  id: string;
+  title: string;
+  description: string;
+  link: string;
+  priority: 'high' | 'medium' | 'low';
+}
+
+// Dashboard KPI tile
+export interface KpiTileStub {
+  id: string;
+  label: string;
+  value: string;
+  change?: number;
+  trend?: 'up' | 'down' | 'neutral';
+  tooltip: string;
+}

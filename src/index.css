@@ -53,6 +53,10 @@
 
     --nav-active: 174 72% 46%;
     --nav-active-bg: 174 72% 46% / 0.1;
+
+    --chart-positive: 142 72% 42%;
+    --chart-negative: 0 72% 51%;
+    --chart-warning: 38 92% 50%;
   }
 }
 
