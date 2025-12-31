@@ -46,4 +46,5 @@ export {
   type UseWatchlistStubReturn,
   type UseOracleStubReturn,
   type DemoControls,
+  type ConfirmPayload,
 } from './hooks';
