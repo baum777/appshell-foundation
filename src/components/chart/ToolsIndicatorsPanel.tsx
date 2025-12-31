@@ -6,7 +6,9 @@ import {
 } from "@/components/ui/accordion";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sparkles } from "lucide-react";
 
 const INDICATORS = [
   { id: "sma", label: "SMA (20)" },
@@ -26,11 +28,37 @@ const DRAWING_TOOLS = [
 interface ToolsPanelContentProps {
   enabledIndicators: string[];
   onToggleIndicator: (id: string) => void;
+  onOpenAIAnalyzer?: () => void;
 }
 
-function ToolsPanelContent({ enabledIndicators, onToggleIndicator }: ToolsPanelContentProps) {
+function ToolsPanelContent({
+  enabledIndicators,
+  onToggleIndicator,
+  onOpenAIAnalyzer,
+}: ToolsPanelContentProps) {
   return (
-    <Accordion type="multiple" defaultValue={["indicators"]} className="w-full">
+    <Accordion type="multiple" defaultValue={["indicators", "ai-tools"]} className="w-full">
+      {/* AI Tools Section */}
+      <AccordionItem value="ai-tools">
+        <AccordionTrigger className="text-sm font-medium py-3">
+          AI Tools
+        </AccordionTrigger>
+        <AccordionContent>
+          <div className="py-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full justify-start gap-2"
+              onClick={onOpenAIAnalyzer}
+              aria-label="Analyze chart with AI"
+            >
+              <Sparkles className="h-4 w-4 text-primary" />
+              AI TA Analyze
+            </Button>
+          </div>
+        </AccordionContent>
+      </AccordionItem>
+
       <AccordionItem value="indicators">
         <AccordionTrigger className="text-sm font-medium py-3">
           Indicators
@@ -96,6 +124,7 @@ function ToolsPanelContent({ enabledIndicators, onToggleIndicator }: ToolsPanelC
 interface ToolsIndicatorsPanelProps {
   enabledIndicators: string[];
   onToggleIndicator: (id: string) => void;
+  onOpenAIAnalyzer?: () => void;
 }
 
 export function ToolsIndicatorsPanel(props: ToolsIndicatorsPanelProps) {
