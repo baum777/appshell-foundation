@@ -36,6 +36,7 @@ export {
   useChartStub,
   useWatchlistStub,
   useOracleStub,
+  useSettingsStub,
   createDemoControls,
   type UseUserStubReturn,
   type UseDashboardStubReturn,
@@ -45,6 +46,8 @@ export {
   type UseChartStubReturn,
   type UseWatchlistStubReturn,
   type UseOracleStubReturn,
+  type UseSettingsStubReturn,
+  type SettingsState,
   type DemoControls,
   type ConfirmPayload,
 } from './hooks';

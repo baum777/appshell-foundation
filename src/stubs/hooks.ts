@@ -289,6 +289,82 @@ export function useOracleStub(): UseOracleStubReturn {
   return { pageState, insights, setInsights, markAsRead };
 }
 
+// Settings stub hook
+export interface SettingsState {
+  // Appearance
+  theme: 'light' | 'dark';
+  density: 'comfortable' | 'compact';
+  // Chart
+  defaultTimeframe: string;
+  showVolume: boolean;
+  showIndicatorsPanel: boolean;
+  // Notifications
+  priceAlerts: boolean;
+  dailyRecap: boolean;
+  quietHours: string;
+  // Monitoring
+  telemetry: boolean;
+  // Journal
+  autoCapture: boolean;
+  // Risk
+  maxRiskPercent: number;
+  positionSize: number;
+  // Setup
+  walletConnected: boolean;
+  hasAlerts: boolean;
+  hasWatchlistItems: boolean;
+  chartPreferencesSet: boolean;
+  backupConfigured: boolean;
+}
+
+export interface UseSettingsStubReturn {
+  pageState: UsePageStateReturn;
+  settings: SettingsState;
+  setSettings: React.Dispatch<React.SetStateAction<SettingsState>>;
+  updateSetting: <K extends keyof SettingsState>(key: K, value: SettingsState[K]) => void;
+  resetToDefaults: () => void;
+  connectedWallets: { id: string; address: string; type: string }[];
+}
+
+const defaultSettings: SettingsState = {
+  theme: 'dark',
+  density: 'comfortable',
+  defaultTimeframe: '1h',
+  showVolume: true,
+  showIndicatorsPanel: true,
+  priceAlerts: true,
+  dailyRecap: false,
+  quietHours: 'none',
+  telemetry: true,
+  autoCapture: true,
+  maxRiskPercent: 2,
+  positionSize: 100,
+  walletConnected: true,
+  hasAlerts: true,
+  hasWatchlistItems: true,
+  chartPreferencesSet: false,
+  backupConfigured: false,
+};
+
+export function useSettingsStub(): UseSettingsStubReturn {
+  const pageState = usePageState('ready');
+  const [settings, setSettings] = useState<SettingsState>({ ...defaultSettings });
+  const [connectedWallets] = useState([
+    { id: 'wallet-1', address: '0x1234...5678', type: 'MetaMask' },
+  ]);
+
+  const updateSetting = <K extends keyof SettingsState>(key: K, value: SettingsState[K]) => {
+    setSettings((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const resetToDefaults = () => {
+    // BACKEND_TODO: real reset/destructive actions
+    setSettings({ ...defaultSettings });
+  };
+
+  return { pageState, settings, setSettings, updateSetting, resetToDefaults, connectedWallets };
+}
+
 // Demo controls for testing different states
 export interface DemoControls {
   setEmpty: () => void;
