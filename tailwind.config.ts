@@ -69,6 +69,11 @@ export default {
           active: "hsl(var(--nav-active))",
           "active-bg": "hsl(var(--nav-active-bg))",
         },
+        chart: {
+          positive: "hsl(var(--chart-positive))",
+          negative: "hsl(var(--chart-negative))",
+          warning: "hsl(var(--chart-warning))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",

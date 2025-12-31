@@ -6,6 +6,9 @@ import type {
   OracleStub,
   DashboardMetricStub,
   RecentActivityStub,
+  OverviewCardStub,
+  NextActionStub,
+  KpiTileStub,
 } from './contracts';
 
 // Stable base timestamp for deterministic data
@@ -140,4 +143,62 @@ export function makeRecentActivity(count: number): RecentActivityStub[] {
     description: activities[i % activities.length].description,
     timestamp: offsetDate(i),
   }));
+}
+
+export function makeOverviewCards(): OverviewCardStub[] {
+  return [
+    {
+      id: 'overview-today',
+      type: 'today',
+      title: 'Today',
+      summary: 'Market analysis ready',
+      badge: 'New',
+      link: '/oracle',
+    },
+    {
+      id: 'overview-alerts',
+      type: 'alerts',
+      title: 'Alerts',
+      summary: '2 triggered today',
+      count: 5,
+      link: '/alerts',
+    },
+    {
+      id: 'overview-journal',
+      type: 'journal',
+      title: 'Journal',
+      summary: '3 pending, 12 confirmed',
+      count: 15,
+      link: '/journal',
+    },
+  ];
+}
+
+export function makeNextActions(): NextActionStub[] {
+  return [
+    {
+      id: 'action-1',
+      title: 'Review pending entries',
+      description: 'You have 3 trades awaiting review',
+      link: '/journal?view=pending',
+      priority: 'high',
+    },
+    {
+      id: 'action-2',
+      title: 'Create an alert',
+      description: 'Set up price alerts for your watchlist',
+      link: '/alerts',
+      priority: 'medium',
+    },
+  ];
+}
+
+export function makeKpiTiles(): KpiTileStub[] {
+  return [
+    { id: 'kpi-1', label: 'Win Rate', value: '64%', change: 2.5, trend: 'up', tooltip: 'Percentage of profitable trades over the last 30 days' },
+    { id: 'kpi-2', label: 'Total Trades', value: '127', change: 12, trend: 'up', tooltip: 'Total number of trades recorded this month' },
+    { id: 'kpi-3', label: 'Avg R:R', value: '2.4', change: -0.1, trend: 'down', tooltip: 'Average risk-to-reward ratio across all trades' },
+    { id: 'kpi-4', label: 'Streak', value: '5W', trend: 'neutral', tooltip: 'Current winning streak' },
+    { id: 'kpi-5', label: 'P&L', value: '+$2,450', change: 8.2, trend: 'up', tooltip: 'Total profit/loss this month' },
+  ];
 }
