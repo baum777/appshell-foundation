@@ -122,17 +122,59 @@ export function useAlertsStub(): UseAlertsStubReturn {
 }
 
 // Journal stub hook
+export interface ConfirmPayload {
+  mood: string;
+  note: string;
+  tags: string[];
+}
+
 export interface UseJournalStubReturn {
   pageState: UsePageStateReturn;
   entries: JournalEntryStub[];
   setEntries: React.Dispatch<React.SetStateAction<JournalEntryStub[]>>;
+  confirmEntry: (id: string, payload: ConfirmPayload) => void;
+  archiveEntry: (id: string, reason: string) => void;
+  deleteEntry: (id: string) => void;
+  restoreEntry: (id: string) => void;
 }
 
 export function useJournalStub(): UseJournalStubReturn {
   const pageState = usePageState('ready');
-  const [entries, setEntries] = useState<JournalEntryStub[]>(makeJournalEntries(5));
+  const [entries, setEntries] = useState<JournalEntryStub[]>(makeJournalEntries(8));
 
-  return { pageState, entries, setEntries };
+  const confirmEntry = (id: string, payload: ConfirmPayload) => {
+    // BACKEND_TODO: persist confirm with payload
+    setEntries((prev) =>
+      prev.map((entry) =>
+        entry.id === id ? { ...entry, status: 'confirmed' as const } : entry
+      )
+    );
+  };
+
+  const archiveEntry = (id: string, reason: string) => {
+    // BACKEND_TODO: persist archive with reason
+    setEntries((prev) =>
+      prev.map((entry) =>
+        entry.id === id ? { ...entry, status: 'archived' as const } : entry
+      )
+    );
+  };
+
+  const deleteEntry = (id: string) => {
+    // BACKEND_TODO: delete entry
+    setEntries((prev) => prev.filter((entry) => entry.id !== id));
+  };
+
+  const restoreEntry = (id: string) => {
+    // BACKEND_TODO: restore entry
+    setEntries((prev) =>
+      prev.map((entry) =>
+        entry.id === id ? { ...entry, status: 'pending' as const } : entry
+      )
+    );
+  };
+
+  return { pageState, entries, setEntries, confirmEntry, archiveEntry, deleteEntry, restoreEntry };
 }
 
 // Learn/Lessons stub hook
