@@ -57,21 +57,26 @@ export function makeJournalEntries(count: number): JournalEntryStub[] {
 
 export function makeLessons(count: number): LessonStub[] {
   const difficulties: LessonStub['difficulty'][] = ['easy', 'medium', 'hard'];
-  const categories = ['Basics', 'Technical Analysis', 'Risk Management', 'Psychology'];
-  const titles = [
-    'Introduction to Chart Patterns',
-    'Understanding Support & Resistance',
-    'Candlestick Formations 101',
-    'Risk-Reward Ratios Explained',
-    'Managing Trading Emotions',
-    'Volume Analysis Fundamentals',
-    'Trend Following Strategies',
-    'Position Sizing Mastery',
+  const categories = ['Basics', 'Risk', 'Mindset', 'System'];
+  const lessons = [
+    { title: 'Introduction to Chart Patterns', description: 'Learn the foundational chart patterns every trader should know.' },
+    { title: 'Understanding Support & Resistance', description: 'Master key price levels that drive market decisions.' },
+    { title: 'Candlestick Formations 101', description: 'Decode candlestick signals for better entry timing.' },
+    { title: 'Risk-Reward Ratios Explained', description: 'Calculate and optimize your risk-to-reward on every trade.' },
+    { title: 'Managing Trading Emotions', description: 'Build mental frameworks to stay disciplined under pressure.' },
+    { title: 'Volume Analysis Fundamentals', description: 'Use volume to confirm trends and spot reversals early.' },
+    { title: 'Trend Following Strategies', description: 'Ride momentum with proven trend-following techniques.' },
+    { title: 'Position Sizing Mastery', description: 'Size positions correctly to protect capital and maximize gains.' },
+    { title: 'Building a Trading System', description: 'Create a repeatable system that fits your style and goals.' },
+    { title: 'Journaling for Improvement', description: 'Track and analyze trades to accelerate your growth.' },
+    { title: 'Breakout Trading Essentials', description: 'Identify and trade breakouts with confidence.' },
+    { title: 'The Psychology of Loss', description: 'Handle losses constructively and avoid revenge trading.' },
   ];
 
   return Array.from({ length: count }, (_, i) => ({
     id: `lesson-${i + 1}`,
-    title: titles[i % titles.length],
+    title: lessons[i % lessons.length].title,
+    description: lessons[i % lessons.length].description,
     difficulty: difficulties[i % difficulties.length],
     category: categories[i % categories.length],
     locked: i > 2,

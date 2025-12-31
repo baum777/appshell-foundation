@@ -20,6 +20,7 @@ export default function Lessons() {
   // Filter state
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<SortOption>("newest");
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Locked lesson dialog
   const [lockedDialogOpen, setLockedDialogOpen] = useState(false);
@@ -34,11 +35,21 @@ export default function Lessons() {
   const unlockedCount = lessons.filter((l) => !l.locked).length;
   const lockedCount = lessons.filter((l) => l.locked).length;
 
-  const hasActiveFilters = selectedCategories.length > 0 || sortBy !== "newest";
+  const hasActiveFilters = selectedCategories.length > 0 || sortBy !== "newest" || searchQuery.trim() !== "";
 
   // Filter and sort lessons
   const filteredLessons = useMemo(() => {
     let result = [...lessons];
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      result = result.filter(
+        (l) =>
+          l.title.toLowerCase().includes(query) ||
+          l.description.toLowerCase().includes(query)
+      );
+    }
 
     // Apply category filter
     if (selectedCategories.length > 0) {
@@ -61,7 +72,7 @@ export default function Lessons() {
     }
 
     return result;
-  }, [lessons, selectedCategories, sortBy]);
+  }, [lessons, selectedCategories, sortBy, searchQuery]);
 
   const handleCategoryToggle = (category: string) => {
     setSelectedCategories((prev) =>
@@ -74,6 +85,7 @@ export default function Lessons() {
   const handleReset = () => {
     setSelectedCategories([]);
     setSortBy("newest");
+    setSearchQuery("");
   };
 
   const handleLockedClick = (lesson: LessonStub) => {
@@ -84,7 +96,7 @@ export default function Lessons() {
   // Loading state
   if (pageState.state === "loading") {
     return (
-      <PageContainer testId="page-learn">
+      <PageContainer testId="page-lessons">
         <LearnSkeleton />
       </PageContainer>
     );
@@ -93,7 +105,7 @@ export default function Lessons() {
   // Error state
   if (pageState.state === "error") {
     return (
-      <PageContainer testId="page-learn">
+      <PageContainer testId="page-lessons">
         <div className="space-y-6">
           <LearnHeader unlockedCount={0} totalCount={0} />
           <ErrorBanner
@@ -111,7 +123,7 @@ export default function Lessons() {
   // Empty state (no lessons at all)
   if (pageState.state === "empty" || lessons.length === 0) {
     return (
-      <PageContainer testId="page-learn">
+      <PageContainer testId="page-lessons">
         <div className="space-y-6">
           <LearnHeader unlockedCount={0} totalCount={0} />
           <LearnEmptyState
@@ -128,7 +140,7 @@ export default function Lessons() {
 
   // Ready state
   return (
-    <PageContainer testId="page-learn">
+    <PageContainer testId="page-lessons">
       <div className="space-y-6">
         <LearnHeader unlockedCount={unlockedCount} totalCount={lessons.length} />
 
@@ -142,6 +154,8 @@ export default function Lessons() {
           onSortChange={setSortBy}
           onReset={handleReset}
           hasActiveFilters={hasActiveFilters}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
         />
 
         {filteredLessons.length === 0 ? (

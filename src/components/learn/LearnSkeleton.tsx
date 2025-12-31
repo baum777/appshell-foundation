@@ -7,8 +7,8 @@ export function LearnSkeleton() {
       {/* Header skeleton */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-2">
-          <Skeleton className="h-8 w-24" />
-          <Skeleton className="h-4 w-48" />
+          <Skeleton className="h-8 w-28" />
+          <Skeleton className="h-4 w-64" />
         </div>
         <div className="flex items-center gap-3">
           <div className="text-right space-y-1">
@@ -33,9 +33,12 @@ export function LearnSkeleton() {
 
       {/* Filters skeleton */}
       <div className="space-y-3">
+        {/* Search input skeleton */}
+        <Skeleton className="h-10 w-full" />
+        {/* Category chips skeleton */}
         <div className="flex flex-wrap gap-2">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-7 w-20 rounded-full" />
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} className="h-8 w-20 rounded-full" />
           ))}
         </div>
         <div className="flex gap-3">
@@ -45,14 +48,16 @@ export function LearnSkeleton() {
 
       {/* Grid skeleton */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {Array.from({ length: 6 }).map((_, i) => (
+        {Array.from({ length: 9 }).map((_, i) => (
           <Card key={i}>
             <CardContent className="p-4 space-y-3">
               <div className="flex gap-2">
                 <Skeleton className="h-5 w-14 rounded-full" />
-                <Skeleton className="h-5 w-24 rounded-full" />
+                <Skeleton className="h-5 w-16 rounded-full" />
               </div>
               <Skeleton className="h-5 w-full" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-3/4" />
               <div className="space-y-1">
                 <div className="flex justify-between">
                   <Skeleton className="h-3 w-12" />
@@ -60,6 +65,7 @@ export function LearnSkeleton() {
                 </div>
                 <Skeleton className="h-1.5 w-full" />
               </div>
+              <Skeleton className="h-9 w-full" />
             </CardContent>
           </Card>
         ))}
