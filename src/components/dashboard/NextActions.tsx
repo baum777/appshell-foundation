@@ -1,7 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { ArrowRight, AlertCircle, CheckCircle } from 'lucide-react';
 import type { NextActionStub } from '@/stubs/contracts';
 
@@ -28,34 +27,41 @@ export function NextActions({ actions }: NextActionsProps) {
 
   return (
     <Card className="bg-card/50 border-border/50">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-medium text-muted-foreground">Next Actions</CardTitle>
+      <CardHeader className="pb-2 sm:pb-3">
+        <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground uppercase tracking-wide">
+          Next Actions
+        </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-2 sm:space-y-3">
         {actions.map((action) => {
           const Icon = priorityIcons[action.priority];
           return (
             <div 
               key={action.id}
-              className="flex items-center justify-between gap-4 p-3 rounded-lg bg-background/50 border border-border/30"
+              className="flex items-center justify-between gap-3 sm:gap-4 p-2.5 sm:p-3 rounded-lg bg-background/50 border border-border/30"
             >
-              <div className="flex items-center gap-3">
-                <div className={`p-1.5 rounded-md ${priorityStyles[action.priority]}`}>
-                  <Icon className="h-3.5 w-3.5" />
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                <div className={`p-1.5 rounded-md shrink-0 ${priorityStyles[action.priority]}`}>
+                  <Icon className="h-3.5 w-3.5" aria-hidden="true" />
                 </div>
-                <div className="space-y-0.5">
-                  <p className="text-sm font-medium text-foreground">{action.title}</p>
-                  <p className="text-xs text-muted-foreground">{action.description}</p>
+                <div className="min-w-0 space-y-0.5">
+                  <p className="text-sm font-medium text-foreground truncate">
+                    {action.title}
+                  </p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {action.description}
+                  </p>
                 </div>
               </div>
               <Button 
                 variant="ghost" 
                 size="sm"
                 onClick={() => navigate(action.link)}
-                className="shrink-0 gap-1"
+                className="shrink-0 gap-1 h-8 px-2 sm:px-3"
+                aria-label={`Go to ${action.title}`}
               >
-                Go
-                <ArrowRight className="h-3 w-3" />
+                <span className="hidden sm:inline">Go</span>
+                <ArrowRight className="h-3 w-3" aria-hidden="true" />
               </Button>
             </div>
           );

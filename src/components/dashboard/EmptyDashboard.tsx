@@ -15,26 +15,36 @@ export function EmptyDashboard() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Hero Empty State */}
-      <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
-        <CardContent className="p-8 text-center space-y-4">
-          <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-            <Rocket className="h-6 w-6 text-primary" />
+      <Card className="bg-gradient-to-br from-primary/5 via-primary/8 to-primary/10 border-primary/20">
+        <CardContent className="p-6 sm:p-8 text-center space-y-4">
+          <div className="mx-auto w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-primary/10 flex items-center justify-center">
+            <Rocket className="h-6 w-6 sm:h-7 sm:w-7 text-primary" aria-hidden="true" />
           </div>
           <div className="space-y-2">
-            <h2 className="text-xl font-semibold text-foreground">Welcome to your trading dashboard</h2>
-            <p className="text-muted-foreground max-w-md mx-auto">
+            <h2 className="text-lg sm:text-xl font-semibold text-foreground">
+              Welcome to your trading dashboard
+            </h2>
+            <p className="text-sm sm:text-base text-muted-foreground max-w-md mx-auto leading-relaxed">
               Get started by connecting your data or logging your first trade. We'll help you track, analyze, and improve your trading.
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
-            <Button onClick={() => navigate('/journal')} className="gap-2">
-              <PenLine className="h-4 w-4" />
+            <Button 
+              onClick={() => navigate('/journal')} 
+              className="gap-2"
+              aria-label="Log your first trade entry"
+            >
+              <PenLine className="h-4 w-4" aria-hidden="true" />
               Log first trade
             </Button>
-            <Button variant="outline" className="gap-2">
-              <Upload className="h-4 w-4" />
+            <Button 
+              variant="outline" 
+              className="gap-2"
+              aria-label="Import existing trading data"
+            >
+              <Upload className="h-4 w-4" aria-hidden="true" />
               Import data
             </Button>
           </div>
@@ -43,20 +53,27 @@ export function EmptyDashboard() {
 
       {/* Start Here Checklist */}
       <Card className="bg-card/50 border-border/50">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-medium text-muted-foreground">Start here</CardTitle>
+        <CardHeader className="pb-2 sm:pb-3">
+          <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground uppercase tracking-wide">
+            Start here
+          </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-2 sm:space-y-3">
           {steps.map((step) => {
             const Icon = step.icon;
             return (
               <div 
                 key={step.id}
-                className="flex items-center gap-3 p-3 rounded-lg bg-background/50 border border-border/30"
+                className="flex items-center gap-3 p-2.5 sm:p-3 rounded-lg bg-background/50 border border-border/30"
               >
-                <Checkbox checked={step.done} disabled className="shrink-0" />
-                <div className="p-1.5 rounded-md bg-muted">
-                  <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+                <Checkbox 
+                  checked={step.done} 
+                  disabled 
+                  className="shrink-0" 
+                  aria-label={step.done ? `${step.label} - completed` : step.label}
+                />
+                <div className="p-1.5 rounded-md bg-muted shrink-0">
+                  <Icon className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
                 </div>
                 <span className={`text-sm ${step.done ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
                   {step.label}
@@ -68,26 +85,35 @@ export function EmptyDashboard() {
       </Card>
 
       {/* Placeholder Cards Grid (disabled state) */}
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 opacity-50 pointer-events-none">
+      <div 
+        className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 opacity-40 pointer-events-none select-none"
+        aria-hidden="true"
+      >
         <Card className="bg-card/30 border-border/30 border-dashed">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Holdings</CardTitle>
+          <CardHeader className="pb-2 sm:pb-3">
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground uppercase tracking-wide">
+              Holdings
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-xs text-muted-foreground">Your holdings will appear here</p>
           </CardContent>
         </Card>
         <Card className="bg-card/30 border-border/30 border-dashed">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Last Trades</CardTitle>
+          <CardHeader className="pb-2 sm:pb-3">
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground uppercase tracking-wide">
+              Last Trades
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-xs text-muted-foreground">Recent trades will appear here</p>
           </CardContent>
         </Card>
         <Card className="bg-card/30 border-border/30 border-dashed">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Insights</CardTitle>
+          <CardHeader className="pb-2 sm:pb-3">
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground uppercase tracking-wide">
+              Insights
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-xs text-muted-foreground">AI insights will appear here</p>
