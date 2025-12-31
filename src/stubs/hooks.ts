@@ -235,13 +235,35 @@ export interface UseWatchlistStubReturn {
   pageState: UsePageStateReturn;
   items: WatchItemStub[];
   setItems: React.Dispatch<React.SetStateAction<WatchItemStub[]>>;
+  addSymbol: (symbol: string) => boolean;
+  removeSymbol: (symbol: string) => void;
 }
 
 export function useWatchlistStub(): UseWatchlistStubReturn {
   const pageState = usePageState('ready');
   const [items, setItems] = useState<WatchItemStub[]>(makeWatchlist(5));
 
-  return { pageState, items, setItems };
+  const addSymbol = (symbol: string): boolean => {
+    const normalized = symbol.toUpperCase().trim();
+    const exists = items.some((item) => item.symbol === normalized);
+    if (exists) return false;
+
+    // BACKEND_TODO: persist watchlist items
+    const newItem: WatchItemStub = {
+      id: `watch-${Date.now()}`,
+      symbol: normalized,
+      name: normalized, // Stub name same as symbol
+    };
+    setItems((prev) => [...prev, newItem]);
+    return true;
+  };
+
+  const removeSymbol = (symbol: string) => {
+    // BACKEND_TODO: persist watchlist items
+    setItems((prev) => prev.filter((item) => item.symbol !== symbol));
+  };
+
+  return { pageState, items, setItems, addSymbol, removeSymbol };
 }
 
 // Oracle stub hook
