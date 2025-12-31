@@ -186,8 +186,9 @@ export interface UseLearnStubReturn {
 
 export function useLearnStub(): UseLearnStubReturn {
   const pageState = usePageState('ready');
-  const [lessons, setLessons] = useState<LessonStub[]>(makeLessons(6));
+  const [lessons, setLessons] = useState<LessonStub[]>(makeLessons(12));
 
+  // BACKEND_TODO: fetch lessons from backend
   return { pageState, lessons, setLessons };
 }
 

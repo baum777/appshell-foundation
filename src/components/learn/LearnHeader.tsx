@@ -11,9 +11,9 @@ export function LearnHeader({ unlockedCount, totalCount }: LearnHeaderProps) {
   return (
     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Learn</h1>
+        <h1 className="text-2xl font-bold text-foreground">Lessons</h1>
         <p className="text-sm text-muted-foreground">
-          Master trading fundamentals and advanced strategies
+          Short drills to level up your trading system.
         </p>
       </div>
       <div className="flex items-center gap-3">

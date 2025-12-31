@@ -24,6 +24,7 @@ export interface JournalEntryStub {
 export interface LessonStub {
   id: string;
   title: string;
+  description: string;
   difficulty: 'easy' | 'medium' | 'hard';
   category: string;
   locked: boolean;
