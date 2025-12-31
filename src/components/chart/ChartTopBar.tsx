@@ -9,10 +9,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Menu } from "lucide-react";
+import { Settings2 } from "lucide-react";
 
 const TIMEFRAMES = [
-  { value: "1m", label: "1m" },
   { value: "5m", label: "5m" },
   { value: "15m", label: "15m" },
   { value: "1h", label: "1h" },
@@ -26,7 +25,7 @@ interface ChartTopBarProps {
   onTimeframeChange: (tf: string) => void;
   isReplayMode: boolean;
   onReplayToggle: (enabled: boolean) => void;
-  onMobileMarketsOpen: () => void;
+  onMobileToolsOpen: () => void;
   isMobile: boolean;
 }
 
@@ -36,29 +35,29 @@ export function ChartTopBar({
   onTimeframeChange,
   isReplayMode,
   onReplayToggle,
-  onMobileMarketsOpen,
+  onMobileToolsOpen,
   isMobile,
 }: ChartTopBarProps) {
   return (
-    <div className="flex items-center justify-between gap-3 p-3 bg-card/50 border border-border/50 rounded-lg">
-      <div className="flex items-center gap-3">
-        {isMobile && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onMobileMarketsOpen}
-            className="mr-1"
-          >
-            <Menu className="h-4 w-4 mr-1" />
-            Markets
-          </Button>
-        )}
+    <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-card/50 border border-border/50 rounded-lg">
+      {/* Left: Symbol badge */}
+      <div className="flex items-center gap-2">
         <Badge variant="secondary" className="text-sm font-medium">
           {symbol}
         </Badge>
+        <Badge variant="outline" className="text-xs text-muted-foreground">
+          Solana
+        </Badge>
+        {isReplayMode && (
+          <Badge variant="default" className="text-xs bg-primary/20 text-primary">
+            Replay Mode
+          </Badge>
+        )}
       </div>
 
+      {/* Center/Right: Controls */}
       <div className="flex items-center gap-3">
+        {/* Timeframe select */}
         <Select value={timeframe} onValueChange={onTimeframeChange}>
           <SelectTrigger className="w-20 h-8">
             <SelectValue />
@@ -72,6 +71,7 @@ export function ChartTopBar({
           </SelectContent>
         </Select>
 
+        {/* Replay toggle */}
         <div className="flex items-center gap-2">
           <Switch
             id="replay-toggle"
@@ -79,10 +79,23 @@ export function ChartTopBar({
             onCheckedChange={onReplayToggle}
             aria-label="Toggle replay mode"
           />
-          <Label htmlFor="replay-toggle" className="text-sm cursor-pointer">
+          <Label htmlFor="replay-toggle" className="text-sm cursor-pointer hidden sm:inline">
             Replay
           </Label>
         </div>
+
+        {/* Mobile tools button */}
+        {isMobile && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onMobileToolsOpen}
+            className="h-8"
+          >
+            <Settings2 className="h-4 w-4" />
+            <span className="ml-1 hidden xs:inline">Tools</span>
+          </Button>
+        )}
       </div>
     </div>
   );
