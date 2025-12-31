@@ -7,6 +7,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import Dashboard from "@/pages/Dashboard";
 import Journal from "@/pages/Journal";
 import Lessons from "@/pages/Lessons";
+import LessonViewer from "@/pages/LessonViewer";
 import Chart from "@/pages/Chart";
 import Alerts from "@/pages/Alerts";
 import Settings from "@/pages/Settings";
@@ -29,6 +30,7 @@ const App = () => (
             <Route path="/" element={<Dashboard />} />
             <Route path="/journal" element={<Journal />} />
             <Route path="/lessons" element={<Lessons />} />
+            <Route path="/lessons/:id" element={<LessonViewer />} />
             <Route path="/chart" element={<Chart />} />
             <Route path="/alerts" element={<Alerts />} />
             <Route path="/settings" element={<Settings />} />
