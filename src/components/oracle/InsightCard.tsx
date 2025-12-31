@@ -1,20 +1,21 @@
+import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Check, Circle } from "lucide-react";
+import { TrendingUp, FileText, Check, Circle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { OracleStub } from "@/stubs/contracts";
 
 interface InsightCardProps {
   insight: OracleStub;
-  onMarkAsRead: (id: string) => void;
+  onToggleRead: (id: string) => void;
 }
 
 const themeColors: Record<string, string> = {
-  bullish: "bg-success/10 text-success border-success/20",
-  bearish: "bg-destructive/10 text-destructive border-destructive/20",
+  bullish: "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20",
+  bearish: "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20",
   neutral: "bg-secondary text-secondary-foreground border-secondary",
-  caution: "bg-warning/10 text-warning border-warning/20",
+  caution: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
 };
 
 function formatTimeAgo(dateString: string): string {
@@ -29,54 +30,85 @@ function formatTimeAgo(dateString: string): string {
   return "Just now";
 }
 
-export function InsightCard({ insight, onMarkAsRead }: InsightCardProps) {
+export function InsightCard({ insight, onToggleRead }: InsightCardProps) {
+  // Extract symbol from title if present (stub heuristic)
+  const symbolMatch = insight.title.match(/\b(BTC|ETH|SOL|AVAX|MATIC)\b/i);
+  const symbol = symbolMatch ? symbolMatch[1].toUpperCase() : null;
+
   return (
     <Card
       className={cn(
-        "transition-all",
+        "transition-all relative overflow-hidden",
         !insight.isRead && "border-primary/30 bg-primary/5"
       )}
     >
-      <CardContent className="py-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex-1 space-y-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge
-                variant="outline"
-                className={cn("text-xs capitalize", themeColors[insight.theme])}
-              >
-                {insight.theme}
+      {/* Left accent for unread */}
+      {!insight.isRead && (
+        <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary" />
+      )}
+
+      <CardContent className="py-4 pl-4 sm:pl-5">
+        <div className="space-y-3">
+          {/* Top row: badges + timestamp */}
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge
+              variant="outline"
+              className={cn("text-xs capitalize", themeColors[insight.theme])}
+            >
+              {insight.theme}
+            </Badge>
+            {!insight.isRead && (
+              <Badge variant="default" className="text-xs">
+                New
               </Badge>
-              {!insight.isRead && (
-                <Badge variant="default" className="text-xs">
-                  New
-                </Badge>
-              )}
-            </div>
-            <h3 className="font-medium text-foreground">{insight.title}</h3>
-            <p className="text-sm text-muted-foreground line-clamp-3">
-              {insight.summary}
-            </p>
-            <div className="text-xs text-muted-foreground">
-              {formatTimeAgo(insight.createdAt)}
-            </div>
-          </div>
-          <div className="flex items-center gap-2 sm:shrink-0">
-            {insight.isRead ? (
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Check className="h-4 w-4" />
-                <span>Read</span>
-              </div>
-            ) : (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onMarkAsRead(insight.id)}
-              >
-                <Circle className="mr-1.5 h-3 w-3" />
-                Mark as read
-              </Button>
             )}
+            <span className="text-xs text-muted-foreground ml-auto">
+              {formatTimeAgo(insight.createdAt)}
+            </span>
+          </div>
+
+          {/* Title */}
+          <h3 className="font-medium text-foreground">{insight.title}</h3>
+
+          {/* Summary */}
+          <p className="text-sm text-muted-foreground line-clamp-3">
+            {insight.summary}
+          </p>
+
+          {/* Actions row */}
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            <Button variant="outline" size="sm" asChild>
+              <Link to={symbol ? `/chart?query=${symbol}` : "/chart"}>
+                <TrendingUp className="mr-1.5 h-3.5 w-3.5" />
+                Open chart
+              </Link>
+            </Button>
+            <Button variant="ghost" size="sm" asChild>
+              {/* BACKEND_TODO: prefill journal note with insight context */}
+              <Link to="/journal">
+                <FileText className="mr-1.5 h-3.5 w-3.5" />
+                Save to Journal
+              </Link>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onToggleRead(insight.id)}
+              aria-pressed={insight.isRead}
+              className="ml-auto"
+            >
+              {insight.isRead ? (
+                <>
+                  <Circle className="mr-1.5 h-3.5 w-3.5" />
+                  Mark unread
+                </>
+              ) : (
+                <>
+                  <Check className="mr-1.5 h-3.5 w-3.5" />
+                  Mark read
+                </>
+              )}
+            </Button>
           </div>
         </div>
       </CardContent>
