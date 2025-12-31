@@ -13,7 +13,7 @@ export function AlertsHeader({ onCreateClick }: AlertsHeaderProps) {
           Alerts
         </h1>
         <p className="text-sm text-muted-foreground">
-          Monitor key levels
+          Track levels and signals without noise.
         </p>
       </div>
       <Button onClick={onCreateClick} className="mt-3 sm:mt-0">
