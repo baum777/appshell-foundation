@@ -141,11 +141,43 @@ export function CardSkeleton({ className }: CardSkeletonProps) {
       )}
       aria-hidden="true"
     >
-      <div className="h-5 w-1/3 bg-muted rounded animate-pulse" />
-      <div className="space-y-2">
-        <div className="h-4 bg-muted rounded animate-pulse" />
-        <div className="h-4 w-4/5 bg-muted rounded animate-pulse" />
+    <div className="h-5 w-1/3 bg-muted rounded animate-pulse" />
+    <div className="space-y-2">
+      <div className="h-4 bg-muted rounded animate-pulse" />
+      <div className="h-4 w-4/5 bg-muted rounded animate-pulse" />
+    </div>
+  </div>
+);
+}
+
+interface ErrorBannerProps {
+  message?: string;
+  onRetry?: () => void;
+  className?: string;
+}
+
+export function ErrorBanner({
+  message = "Something went wrong",
+  onRetry,
+  className,
+}: ErrorBannerProps) {
+  return (
+    <div
+      className={cn(
+        "flex items-center justify-between gap-4 rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3",
+        className
+      )}
+      role="alert"
+    >
+      <div className="flex items-center gap-3">
+        <AlertCircle className="h-5 w-5 text-destructive shrink-0" />
+        <p className="text-sm text-foreground">{message}</p>
       </div>
+      {onRetry && (
+        <Button onClick={onRetry} variant="outline" size="sm">
+          Retry
+        </Button>
+      )}
     </div>
   );
 }
