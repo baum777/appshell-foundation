@@ -168,11 +168,11 @@ export function MarketsSheet({
 
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
-      <SheetContent side="left" className="w-80 p-0 bg-background">
+      <SheetContent side="left" className="w-80 p-0 bg-background pb-20">
         <SheetHeader className="p-4 border-b border-border/50">
           <SheetTitle>Markets</SheetTitle>
         </SheetHeader>
-        <div className="h-[calc(100vh-5rem)]">
+        <div className="h-[calc(100vh-8rem)]">
           <MarketsList
             {...props}
             onSelectMarket={handleSelectMarket}

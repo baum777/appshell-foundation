@@ -47,6 +47,7 @@ export const primaryNavItems: NavItem[] = [
     path: "/lessons",
     icon: BookOpen,
     testId: "nav-learn",
+    activeRoutes: ["/lessons"],
   },
   {
     label: "Chart",
