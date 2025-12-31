@@ -1,0 +1,221 @@
+name: PR Quality Checks
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  # Prüft PR-Titel und Beschreibung
+  pr-metadata:
+    name: PR Metadata Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Check PR Title Format
+        uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            docs
+            style
+            refactor
+            perf
+            test
+            chore
+          requireScope: false
+          subjectPattern: ^[A-Z].+$
+          subjectPatternError: |
+            Der PR-Titel muss mit einem Großbuchstaben beginnen.
+            Beispiele:
+            - feat: Add user authentication
+            - fix: Correct sidebar collapse animation
+            - docs: Update README with setup instructions
+
+      - name: Check PR Description
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            if (!pr.body || pr.body.length < 30) {
+              core.setFailed('PR-Beschreibung ist zu kurz. Bitte füge eine aussagekräftige Beschreibung hinzu.');
+            }
+
+  # File Size Check
+  file-size-check:
+    name: File Size Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for Large Files
+        run: |
+          echo "Prüfe auf große Dateien (> 500KB)..."
+          
+          LARGE_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | \
+            xargs -I {} sh -c 'if [ -f {} ] && [ $(wc -c < {}) -gt 512000 ]; then echo {}; fi')
+          
+          if [ -n "$LARGE_FILES" ]; then
+            echo "⚠️ Folgende Dateien sind größer als 500KB:"
+            echo "$LARGE_FILES"
+            echo ""
+            echo "Bitte prüfe, ob diese Dateien wirklich benötigt werden oder komprimiert werden können."
+            exit 1
+          else
+            echo "✅ Keine zu großen Dateien gefunden"
+          fi
+
+  # Bundle Size Impact
+  bundle-size:
+    name: Bundle Size Impact
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Current Branch
+        run: npm run build
+
+      - name: Get Current Bundle Size
+        id: current
+        run: |
+          CURRENT_SIZE=$(du -sb dist/ | cut -f1)
+          echo "size=$CURRENT_SIZE" >> $GITHUB_OUTPUT
+          echo "Current bundle size: $CURRENT_SIZE bytes"
+
+      - name: Checkout Base Branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.base_ref }}
+
+      - name: Build Base Branch
+        run: |
+          npm ci
+          npm run build
+
+      - name: Get Base Bundle Size
+        id: base
+        run: |
+          BASE_SIZE=$(du -sb dist/ | cut -f1)
+          echo "size=$BASE_SIZE" >> $GITHUB_OUTPUT
+          echo "Base bundle size: $BASE_SIZE bytes"
+
+      - name: Compare Bundle Sizes
+        run: |
+          CURRENT=${{ steps.current.outputs.size }}
+          BASE=${{ steps.base.outputs.size }}
+          DIFF=$((CURRENT - BASE))
+          PERCENT=$(awk "BEGIN {printf \"%.2f\", ($DIFF / $BASE) * 100}")
+          
+          echo "### 📦 Bundle Size Impact" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Base Size | $(numfmt --to=iec-i --suffix=B $BASE) |" >> $GITHUB_STEP_SUMMARY
+          echo "| Current Size | $(numfmt --to=iec-i --suffix=B $CURRENT) |" >> $GITHUB_STEP_SUMMARY
+          echo "| Difference | $(numfmt --to=iec-i --suffix=B $DIFF) |" >> $GITHUB_STEP_SUMMARY
+          echo "| Change | ${PERCENT}% |" >> $GITHUB_STEP_SUMMARY
+          
+          if [ $DIFF -gt 102400 ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "⚠️ **Bundle size increased by more than 100KB**" >> $GITHUB_STEP_SUMMARY
+            echo "Please review if this is acceptable." >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # Code Coverage (optional - wenn Unit Tests vorhanden)
+  coverage:
+    name: Code Coverage
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Tests with Coverage
+        run: |
+          echo "⏭️ Tests übersprungen (noch nicht implementiert)"
+          # npm run test:coverage
+        continue-on-error: true
+
+  # Accessibility Check
+  accessibility:
+    name: Accessibility Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Run axe Accessibility Tests
+        run: |
+          echo "♿ Accessibility Tests würden hier laufen"
+          # npx @axe-core/cli dist/index.html
+        continue-on-error: true
+
+  # Dependency Review
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+          deny-licenses: GPL-3.0, AGPL-3.0
+
+  # All Checks Passed
+  pr-checks-success:
+    name: All PR Checks Passed
+    runs-on: ubuntu-latest
+    needs: [pr-metadata, file-size-check, bundle-size, dependency-review]
+    if: success()
+    
+    steps:
+      - name: Success Message
+        run: |
+          echo "### ✅ Alle PR-Checks bestanden!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Dieser PR ist bereit für das Code Review." >> $GITHUB_STEP_SUMMARY
