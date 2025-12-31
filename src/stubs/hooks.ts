@@ -196,7 +196,11 @@ export interface UseChartStubReturn {
   pageState: UsePageStateReturn;
   markets: WatchItemStub[];
   favorites: string[];
+  selectedSymbol: string;
+  selectedTimeframe: string;
   setMarkets: React.Dispatch<React.SetStateAction<WatchItemStub[]>>;
+  setSelectedSymbol: (symbol: string) => void;
+  setSelectedTimeframe: (tf: string) => void;
   toggleFavorite: (id: string) => void;
 }
 
@@ -204,6 +208,8 @@ export function useChartStub(): UseChartStubReturn {
   const pageState = usePageState('ready');
   const [markets, setMarkets] = useState<WatchItemStub[]>(makeWatchlist(8));
   const [favorites, setFavorites] = useState<string[]>(['watch-1', 'watch-2']);
+  const [selectedSymbol, setSelectedSymbol] = useState('BTC/USDT');
+  const [selectedTimeframe, setSelectedTimeframe] = useState('1h');
 
   const toggleFavorite = (id: string) => {
     setFavorites((prev) =>
@@ -211,7 +217,17 @@ export function useChartStub(): UseChartStubReturn {
     );
   };
 
-  return { pageState, markets, favorites, setMarkets, toggleFavorite };
+  return {
+    pageState,
+    markets,
+    favorites,
+    selectedSymbol,
+    selectedTimeframe,
+    setMarkets,
+    setSelectedSymbol,
+    setSelectedTimeframe,
+    toggleFavorite,
+  };
 }
 
 // Watchlist stub hook
