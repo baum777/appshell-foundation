@@ -7,3 +7,4 @@ export { ToolsIndicatorsPanel, ToolsIndicatorsSheet } from './ToolsIndicatorsPan
 export { ReplayControls } from './ReplayControls';
 export { ChartSkeleton } from './ChartSkeleton';
 export { ChartEmptyState } from './ChartEmptyState';
+export { AITAAnalyzerDialog } from './AITAAnalyzerDialog';

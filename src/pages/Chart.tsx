@@ -17,6 +17,7 @@ import {
 } from "@/components/chart";
 import { MarketsBanner } from "@/components/chart/MarketsBanner";
 import { BottomCardsCarousel } from "@/components/chart/BottomCardsCarousel";
+import { AITAAnalyzerDialog } from "@/components/chart/AITAAnalyzerDialog";
 
 export default function Chart() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -39,12 +40,13 @@ export default function Chart() {
 
   // UI state
   const [toolsSheetOpen, setToolsSheetOpen] = useState(false);
+  const [aiAnalyzerOpen, setAiAnalyzerOpen] = useState(false);
   const [activeTool, setActiveTool] = useState("cursor");
   const [crosshairEnabled, setCrosshairEnabled] = useState(true);
   const [enabledIndicators, setEnabledIndicators] = useState<string[]>(["sma"]);
 
   // Track if any overlay is open for keyboard shortcut guard
-  const isOverlayOpen = toolsSheetOpen;
+  const isOverlayOpen = toolsSheetOpen || aiAnalyzerOpen;
 
   // Toggle replay mode via query param
   const handleReplayToggle = useCallback(
@@ -195,6 +197,7 @@ export default function Chart() {
               <ToolsIndicatorsPanel
                 enabledIndicators={enabledIndicators}
                 onToggleIndicator={handleToggleIndicator}
+                onOpenAIAnalyzer={() => setAiAnalyzerOpen(true)}
               />
             </div>
           )}
@@ -207,6 +210,19 @@ export default function Chart() {
         onOpenChange={setToolsSheetOpen}
         enabledIndicators={enabledIndicators}
         onToggleIndicator={handleToggleIndicator}
+        onOpenAIAnalyzer={() => {
+          setToolsSheetOpen(false);
+          setAiAnalyzerOpen(true);
+        }}
+      />
+
+      {/* AI TA Analyzer Dialog */}
+      <AITAAnalyzerDialog
+        isOpen={aiAnalyzerOpen}
+        onOpenChange={setAiAnalyzerOpen}
+        selectedMarket={selectedSymbol}
+        selectedTimeframe={selectedTimeframe}
+        isReplayMode={isReplayMode}
       />
     </PageContainer>
   );
