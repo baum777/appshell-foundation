@@ -70,6 +70,22 @@ export const primaryNavItems: NavItem[] = [
   },
 ];
 
+// Sidebar-only nav items (Watchlist + Oracle always visible, Handbook under dev flag)
+export const sidebarOnlyItems: NavItem[] = [
+  {
+    label: "Watchlist",
+    path: "/watchlist",
+    icon: Eye,
+    testId: "nav-watchlist",
+  },
+  {
+    label: "Oracle",
+    path: "/oracle",
+    icon: Sparkles,
+    testId: "nav-oracle",
+  },
+];
+
 export const advancedNavGroup: NavGroup = {
   label: "Advanced",
   testId: "nav-advanced",
@@ -77,18 +93,6 @@ export const advancedNavGroup: NavGroup = {
   icon: ChevronDown,
   featureFlag: "VITE_ENABLE_DEV_NAV",
   items: [
-    {
-      label: "Watchlist",
-      path: "/watchlist",
-      icon: Eye,
-      testId: "nav-watchlist",
-    },
-    {
-      label: "Oracle",
-      path: "/oracle",
-      icon: Sparkles,
-      testId: "nav-oracle",
-    },
     {
       label: "Handbook",
       path: "/handbook",

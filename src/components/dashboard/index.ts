@@ -1,4 +1,5 @@
 export { DashboardHeader } from './DashboardHeader';
+export { GlobalSearchBar } from './GlobalSearchBar';
 export { QuickOverview } from './QuickOverview';
 export { KpiStrip } from './KpiStrip';
 export { NextActions } from './NextActions';
