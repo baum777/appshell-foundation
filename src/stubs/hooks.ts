@@ -83,13 +83,42 @@ export interface UseAlertsStubReturn {
   pageState: UsePageStateReturn;
   alerts: AlertStub[];
   setAlerts: React.Dispatch<React.SetStateAction<AlertStub[]>>;
+  createAlert: (symbol: string, condition: string, targetPrice: number) => void;
+  deleteAlert: (id: string) => void;
+  toggleStatus: (id: string) => void;
 }
 
 export function useAlertsStub(): UseAlertsStubReturn {
   const pageState = usePageState('ready');
   const [alerts, setAlerts] = useState<AlertStub[]>(makeAlerts(5));
 
-  return { pageState, alerts, setAlerts };
+  const createAlert = (symbol: string, condition: string, targetPrice: number) => {
+    const newAlert: AlertStub = {
+      id: `alert-${Date.now()}`,
+      symbol: symbol.toUpperCase().trim(),
+      condition,
+      targetPrice,
+      status: 'active',
+      createdAt: new Date().toISOString(),
+    };
+    setAlerts((prev) => [newAlert, ...prev]);
+  };
+
+  const deleteAlert = (id: string) => {
+    setAlerts((prev) => prev.filter((alert) => alert.id !== id));
+  };
+
+  const toggleStatus = (id: string) => {
+    setAlerts((prev) =>
+      prev.map((alert) =>
+        alert.id === id
+          ? { ...alert, status: alert.status === 'active' ? 'paused' : 'active' as const }
+          : alert
+      )
+    );
+  };
+
+  return { pageState, alerts, setAlerts, createAlert, deleteAlert, toggleStatus };
 }
 
 // Journal stub hook
