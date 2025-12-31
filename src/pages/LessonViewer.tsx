@@ -30,6 +30,7 @@ export default function LessonViewer() {
     return (
       <PageContainer testId="page-lesson-viewer">
         <div className="space-y-6">
+          <h1 className="sr-only">Lesson not found</h1>
           <Button variant="ghost" size="sm" onClick={() => navigate("/lessons")}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to lessons
@@ -37,9 +38,9 @@ export default function LessonViewer() {
 
           <Card className="py-12">
             <CardContent className="flex flex-col items-center justify-center text-center">
-              <h3 className="mb-2 text-lg font-semibold text-foreground">
+              <h2 className="mb-2 text-lg font-semibold text-foreground">
                 Lesson not found
-              </h3>
+              </h2>
               <p className="mb-4 text-sm text-muted-foreground">
                 The lesson you're looking for doesn't exist or has been removed.
               </p>

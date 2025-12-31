@@ -128,7 +128,7 @@ export function WatchlistDetailSheet({
 }: WatchlistDetailSheetProps) {
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="h-[80vh] bg-background">
+      <SheetContent side="bottom" className="h-[70vh] bg-background pb-20">
         <SheetHeader>
           <SheetTitle>{item?.symbol ?? "Details"}</SheetTitle>
         </SheetHeader>

@@ -123,7 +123,7 @@ export function ToolsIndicatorsSheet({
 }: ToolsIndicatorsSheetProps) {
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-80 p-0 bg-background">
+      <SheetContent side="right" className="w-80 p-0 bg-background pb-20">
         <SheetHeader className="p-4 border-b border-border/50">
           <SheetTitle>Tools & Indicators</SheetTitle>
         </SheetHeader>
