@@ -5,37 +5,16 @@ export function SettingsSkeleton() {
   return (
     <div className="space-y-6">
       {/* Header skeleton */}
-      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-        <div className="space-y-2">
-          <Skeleton className="h-8 w-32" />
-          <Skeleton className="h-4 w-48" />
-        </div>
-        <Skeleton className="h-9 w-28 mt-2 sm:mt-0" />
+      <div className="space-y-2">
+        <Skeleton className="h-8 w-32" />
+        <Skeleton className="h-4 w-56" />
       </div>
 
-      {/* Setup card skeleton */}
-      <Card>
-        <CardHeader className="pb-3">
-          <Skeleton className="h-5 w-24" />
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Skeleton className="h-4 w-4 rounded-full" />
-                <Skeleton className="h-4 w-32" />
-              </div>
-              <Skeleton className="h-3 w-16" />
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-
       {/* Settings sections skeleton */}
-      {Array.from({ length: 6 }).map((_, i) => (
+      {Array.from({ length: 4 }).map((_, i) => (
         <Card key={i}>
           <CardHeader className="pb-3">
-            <Skeleton className="h-5 w-28" />
+            <Skeleton className="h-5 w-32" />
             <Skeleton className="h-4 w-48" />
           </CardHeader>
           <CardContent className="space-y-4">
@@ -45,8 +24,8 @@ export function SettingsSkeleton() {
                 className="flex items-center justify-between"
               >
                 <div className="space-y-1">
-                  <Skeleton className="h-4 w-24" />
-                  <Skeleton className="h-3 w-36" />
+                  <Skeleton className="h-4 w-28" />
+                  <Skeleton className="h-3 w-44" />
                 </div>
                 <Skeleton className="h-6 w-11 rounded-full" />
               </div>
@@ -54,6 +33,17 @@ export function SettingsSkeleton() {
           </CardContent>
         </Card>
       ))}
+
+      {/* Danger zone skeleton */}
+      <Card className="border-destructive/50">
+        <CardHeader className="pb-3">
+          <Skeleton className="h-5 w-28" />
+          <Skeleton className="h-4 w-36" />
+        </CardHeader>
+        <CardContent>
+          <Skeleton className="h-9 w-36" />
+        </CardContent>
+      </Card>
     </div>
   );
 }
