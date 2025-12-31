@@ -30,9 +30,10 @@ const SPEEDS = [
 
 interface ReplayControlsProps {
   onReset?: () => void;
+  isOverlayOpen?: boolean;
 }
 
-export function ReplayControls({ onReset }: ReplayControlsProps) {
+export function ReplayControls({ onReset, isOverlayOpen = false }: ReplayControlsProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [position, setPosition] = useState(0);
   const [speed, setSpeed] = useState("1");
@@ -64,9 +65,12 @@ export function ReplayControls({ onReset }: ReplayControlsProps) {
     return () => clearTimeout(timer);
   }, []);
 
-  // Keyboard shortcuts
+  // Keyboard shortcuts - with overlay guard
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't fire when overlay is open
+      if (isOverlayOpen) return;
+
       const target = e.target as HTMLElement;
       const isInputFocused =
         target.tagName === "INPUT" ||
@@ -95,7 +99,7 @@ export function ReplayControls({ onReset }: ReplayControlsProps) {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [isOverlayOpen]);
 
   const handleReset = useCallback(() => {
     setIsPlaying(false);

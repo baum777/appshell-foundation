@@ -1,24 +1,22 @@
 import { useState, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { PageContainer } from "@/components/layout/PageContainer";
-import { useChartStub } from "@/stubs/hooks";
+import { useChartStub, useOracleStub, useJournalStub } from "@/stubs/hooks";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, RefreshCw, Settings2 } from "lucide-react";
+import { AlertCircle, RefreshCw, BarChart3 } from "lucide-react";
 import {
   ChartTopBar,
-  MarketsSidebar,
-  MarketsSheet,
   ChartToolbar,
   ChartCanvas,
-  ChartBottomTabs,
   ToolsIndicatorsPanel,
   ToolsIndicatorsSheet,
   ReplayControls,
   ChartSkeleton,
-  ChartEmptyState,
 } from "@/components/chart";
+import { MarketsBanner } from "@/components/chart/MarketsBanner";
+import { BottomCardsCarousel } from "@/components/chart/BottomCardsCarousel";
 
 export default function Chart() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -26,23 +24,27 @@ export default function Chart() {
   const {
     pageState,
     markets,
-    favorites,
     selectedSymbol,
     selectedTimeframe,
     setSelectedSymbol,
     setSelectedTimeframe,
-    toggleFavorite,
   } = useChartStub();
+
+  // Get oracle and journal data for bottom cards
+  const { insights: oracleInsights } = useOracleStub();
+  const { entries: journalEntries } = useJournalStub();
 
   // Replay mode from query param
   const isReplayMode = searchParams.get("replay") === "true";
 
   // UI state
-  const [marketsSheetOpen, setMarketsSheetOpen] = useState(false);
   const [toolsSheetOpen, setToolsSheetOpen] = useState(false);
   const [activeTool, setActiveTool] = useState("cursor");
   const [crosshairEnabled, setCrosshairEnabled] = useState(true);
   const [enabledIndicators, setEnabledIndicators] = useState<string[]>(["sma"]);
+
+  // Track if any overlay is open for keyboard shortcut guard
+  const isOverlayOpen = toolsSheetOpen;
 
   // Toggle replay mode via query param
   const handleReplayToggle = useCallback(
@@ -69,10 +71,18 @@ export default function Chart() {
     setTimeout(() => pageState.setState("ready"), 1000);
   };
 
-  const handleRefreshEmpty = () => {
-    pageState.setState("loading");
-    setTimeout(() => pageState.setState("ready"), 1000);
-  };
+  const handleSelectMarket = useCallback(
+    (symbol: string) => {
+      setSelectedSymbol(symbol);
+      // BACKEND_TODO: fetch chart data for selected market
+    },
+    [setSelectedSymbol]
+  );
+
+  const handleTrySOL = useCallback(() => {
+    handleSelectMarket("SOL");
+    pageState.setState("ready");
+  }, [handleSelectMarket, pageState]);
 
   // Loading state
   if (pageState.isLoading) {
@@ -108,19 +118,8 @@ export default function Chart() {
     );
   }
 
-  // Empty state (no markets)
-  if (pageState.isEmpty || markets.length === 0) {
-    return (
-      <PageContainer testId="page-chart">
-        <div className="space-y-4">
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">
-            Chart
-          </h1>
-          <ChartEmptyState onRefresh={handleRefreshEmpty} />
-        </div>
-      </PageContainer>
-    );
-  }
+  // Check if we have chart data (stub: selectedSymbol exists)
+  const hasChartData = !!selectedSymbol;
 
   // Ready state
   return (
@@ -135,24 +134,20 @@ export default function Chart() {
           onTimeframeChange={setSelectedTimeframe}
           isReplayMode={isReplayMode}
           onReplayToggle={handleReplayToggle}
-          onMobileMarketsOpen={() => setMarketsSheetOpen(true)}
+          onMobileToolsOpen={() => setToolsSheetOpen(true)}
           isMobile={isMobile}
         />
 
-        {/* Main layout */}
-        <div className="flex gap-4">
-          {/* Left sidebar (desktop only) */}
-          {!isMobile && (
-            <MarketsSidebar
-              markets={markets}
-              favorites={favorites}
-              selectedSymbol={selectedSymbol}
-              onSelectMarket={setSelectedSymbol}
-              onToggleFavorite={toggleFavorite}
-            />
-          )}
+        {/* Markets Banner (replaces left sidebar) */}
+        <MarketsBanner
+          selectedMarket={selectedSymbol}
+          onSelectMarket={handleSelectMarket}
+          watchlistItems={markets}
+        />
 
-          {/* Center content */}
+        {/* Main layout - maximized chart width */}
+        <div className="flex gap-4">
+          {/* Center content - full width on mobile, with right panel on desktop */}
           <div className="flex-1 space-y-3 min-w-0">
             <ChartToolbar
               activeTool={activeTool}
@@ -162,24 +157,36 @@ export default function Chart() {
             />
 
             {/* Replay controls (only in replay mode) */}
-            {isReplayMode && <ReplayControls />}
+            {isReplayMode && <ReplayControls isOverlayOpen={isOverlayOpen} />}
 
-            <ChartCanvas symbol={selectedSymbol} timeframe={selectedTimeframe} />
-
-            {/* Mobile tools button */}
-            {isMobile && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setToolsSheetOpen(true)}
-                className="w-full"
+            {/* Chart Canvas with empty overlay */}
+            {hasChartData ? (
+              <ChartCanvas symbol={selectedSymbol} timeframe={selectedTimeframe} />
+            ) : (
+              <div
+                data-testid="chart-canvas-container"
+                className="min-h-[360px] md:min-h-[480px] lg:min-h-[520px] border border-border/50 rounded-lg bg-card/30 flex flex-col items-center justify-center gap-4"
               >
-                <Settings2 className="h-4 w-4 mr-2" />
-                Tools & Indicators
-              </Button>
+                <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center">
+                  <BarChart3 className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <div className="text-center space-y-3">
+                  <p className="text-sm text-muted-foreground">Select a market to view chart</p>
+                  <div className="flex gap-2 justify-center">
+                    <Button variant="outline" size="sm" onClick={handleTrySOL}>
+                      Try SOL
+                    </Button>
+                  </div>
+                </div>
+                {/* BACKEND_TODO: integrate chart library */}
+              </div>
             )}
 
-            <ChartBottomTabs />
+            {/* Bottom Cards Carousel (Oracle / Journal Notes) */}
+            <BottomCardsCarousel
+              oracleInsights={oracleInsights}
+              journalNotes={journalEntries}
+            />
           </div>
 
           {/* Right panel (desktop only, lg+) */}
@@ -194,17 +201,7 @@ export default function Chart() {
         </div>
       </div>
 
-      {/* Mobile sheets */}
-      <MarketsSheet
-        isOpen={marketsSheetOpen}
-        onOpenChange={setMarketsSheetOpen}
-        markets={markets}
-        favorites={favorites}
-        selectedSymbol={selectedSymbol}
-        onSelectMarket={setSelectedSymbol}
-        onToggleFavorite={toggleFavorite}
-      />
-
+      {/* Mobile tools sheet */}
       <ToolsIndicatorsSheet
         isOpen={toolsSheetOpen}
         onOpenChange={setToolsSheetOpen}
