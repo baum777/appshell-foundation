@@ -1,7 +1,6 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { PageContainer } from "@/components/layout/PageContainer";
-import { useAlertsStub } from "@/stubs/hooks";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, RefreshCw } from "lucide-react";
@@ -14,71 +13,80 @@ import {
   AlertsEmptyState,
   AlertsFilterEmpty,
   AlertsSkeleton,
-  type AlertStatusFilter,
+  useAlertsStore,
+  type PrefillData,
 } from "@/components/alerts";
-
-interface PrefillData {
-  symbol?: string;
-  condition?: string;
-  targetPrice?: number;
-  timeframe?: string;
-}
 
 export default function Alerts() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { pageState, alerts, createAlert, deleteAlert, toggleStatus } = useAlertsStub();
-  
+
+  const {
+    pageState,
+    alerts,
+    filteredAlerts,
+    filter,
+    setFilter,
+    createSimpleAlert,
+    createTwoStageAlert,
+    createDeadTokenAlert,
+    deleteAlert,
+    togglePause,
+    cancelWatch,
+    applyPrefill,
+  } = useAlertsStore();
+
   const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false);
-  const [filter, setFilter] = useState<AlertStatusFilter>("all");
   const [prefillData, setPrefillData] = useState<PrefillData | undefined>();
   const prefillAppliedRef = useRef(false);
 
   // URL prefill - apply once on mount
   useEffect(() => {
     if (prefillAppliedRef.current) return;
-    
-    const symbol = searchParams.get("symbol");
-    const condition = searchParams.get("condition");
-    const targetPriceStr = searchParams.get("targetPrice");
-    const timeframe = searchParams.get("timeframe");
-    
-    const hasParams = symbol || condition || targetPriceStr;
-    
-    if (hasParams) {
+
+    const data = applyPrefill(searchParams);
+    if (data) {
       prefillAppliedRef.current = true;
-      
-      const data: PrefillData = {};
-      if (symbol) data.symbol = symbol;
-      if (condition) data.condition = condition;
-      if (targetPriceStr) {
-        const parsed = parseFloat(targetPriceStr);
-        if (!isNaN(parsed)) data.targetPrice = parsed;
-      }
-      if (timeframe) data.timeframe = timeframe;
-      
       setPrefillData(data);
       setIsQuickCreateOpen(true);
-      toast.info("Applied from link");
-      
+      toast.info("Prefilled from link");
+
       // Clean query params
       setSearchParams({}, { replace: true });
     }
-    // BACKEND_TODO: Validate params against allowed values
-  }, [searchParams, setSearchParams]);
+  }, [searchParams, setSearchParams, applyPrefill]);
 
   const handleCreateClick = () => {
     setPrefillData(undefined);
     setIsQuickCreateOpen(true);
   };
 
-  const handleExampleClick = (example: { symbol: string; condition: string; targetPrice: number }) => {
-    setPrefillData(example);
+  const handleExampleClick = (example: {
+    symbol: string;
+    condition: string;
+    targetPrice: number;
+  }) => {
+    setPrefillData({
+      symbol: example.symbol,
+      condition: example.condition,
+      target: example.targetPrice,
+      type: "simple",
+    });
     setIsQuickCreateOpen(true);
   };
 
-  const handleCreateAlert = (symbol: string, condition: string, targetPrice: number) => {
-    createAlert(symbol, condition, targetPrice);
+  const handleSimpleSubmit = (params: Parameters<typeof createSimpleAlert>[0]) => {
+    createSimpleAlert(params);
     toast.success("Alert created");
+  };
+
+  const handleTwoStageSubmit = (params: Parameters<typeof createTwoStageAlert>[0]) => {
+    createTwoStageAlert(params);
+    toast.success("2-Stage alert created");
+  };
+
+  const handleDeadTokenSubmit = (params: Parameters<typeof createDeadTokenAlert>[0]) => {
+    createDeadTokenAlert(params);
+    toast.success("Dead Token alert created");
   };
 
   const handleRetry = () => {
@@ -86,11 +94,15 @@ export default function Alerts() {
     setTimeout(() => pageState.setState("ready"), 1000);
   };
 
-  // Filter alerts
-  const filteredAlerts = useMemo(() => {
-    if (filter === "all") return alerts;
-    return alerts.filter((alert) => alert.status === filter);
-  }, [alerts, filter]);
+  const handleDelete = (id: string) => {
+    deleteAlert(id);
+    toast.success("Alert deleted");
+  };
+
+  const handleCancelWatch = (id: string) => {
+    cancelWatch(id);
+    toast.info("Watch cancelled");
+  };
 
   const isListEmpty = alerts.length === 0;
   const isFilterEmpty = filteredAlerts.length === 0 && !isListEmpty;
@@ -114,10 +126,10 @@ export default function Alerts() {
               Alerts
             </h1>
             <p className="text-sm text-muted-foreground">
-              Monitor key levels
+              Track levels and signals without noise.
             </p>
           </div>
-          
+
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription className="flex items-center justify-between">
@@ -139,14 +151,16 @@ export default function Alerts() {
       <PageContainer testId="page-alerts">
         <div className="space-y-6">
           <AlertsHeader onCreateClick={handleCreateClick} />
-          
+
           <AlertsQuickCreate
             isOpen={isQuickCreateOpen}
             onOpenChange={setIsQuickCreateOpen}
-            onSubmit={handleCreateAlert}
+            onSubmitSimple={handleSimpleSubmit}
+            onSubmitTwoStage={handleTwoStageSubmit}
+            onSubmitDeadToken={handleDeadTokenSubmit}
             prefillData={prefillData}
           />
-          
+
           <AlertsEmptyState
             onCreateClick={handleCreateClick}
             onExampleClick={handleExampleClick}
@@ -161,21 +175,23 @@ export default function Alerts() {
     <PageContainer testId="page-alerts">
       <div className="space-y-6">
         <AlertsHeader onCreateClick={handleCreateClick} />
-        
+
         <AlertsQuickCreate
           isOpen={isQuickCreateOpen}
           onOpenChange={setIsQuickCreateOpen}
-          onSubmit={handleCreateAlert}
+          onSubmitSimple={handleSimpleSubmit}
+          onSubmitTwoStage={handleTwoStageSubmit}
+          onSubmitDeadToken={handleDeadTokenSubmit}
           prefillData={prefillData}
         />
-        
+
         <AlertsFilterBar
           filter={filter}
           onFilterChange={setFilter}
           resultsCount={filteredAlerts.length}
           totalCount={alerts.length}
         />
-        
+
         {isFilterEmpty ? (
           <AlertsFilterEmpty onClearFilter={() => setFilter("all")} />
         ) : (
@@ -184,8 +200,9 @@ export default function Alerts() {
               <AlertCard
                 key={alert.id}
                 alert={alert}
-                onToggleStatus={toggleStatus}
-                onDelete={deleteAlert}
+                onTogglePause={togglePause}
+                onDelete={handleDelete}
+                onCancelWatch={handleCancelWatch}
               />
             ))}
           </div>
