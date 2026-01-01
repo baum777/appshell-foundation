@@ -12,6 +12,7 @@
     "build:backend": "npm run --prefix backend build",
     "start:backend": "npm run --prefix backend start",
     "lint": "eslint .",
+    "lint:api": "npm run --prefix api typecheck",
     "lint:backend": "npm run --prefix backend typecheck",
     "preview": "vite preview",
     "test:e2e": "playwright test",
@@ -19,6 +20,7 @@
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:debug": "playwright test --debug",
     "test:e2e:report": "playwright show-report",
+    "test:api": "npm run --prefix api test",
     "test:backend": "npm run --prefix backend test",
     "migrate": "npm run --prefix backend migrate"
   },
