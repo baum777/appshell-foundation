@@ -32,8 +32,10 @@ function getNotificationTitle(event: AlertEmitted): string {
       return `Confirmed Signal: ${symbol}`;
     case 'DEAD_TOKEN_STAGE':
     case 'DEAD_TOKEN_SESSION_ENDED':
-      const stage = event.detail?.deadTokenStage || event.type;
-      return `Dead Token: ${symbol} — ${stage}`;
+      {
+        const stage = event.detail?.deadTokenStage || event.type;
+        return `Dead Token: ${symbol} — ${stage}`;
+      }
     default:
       return `Alert: ${symbol}`;
   }

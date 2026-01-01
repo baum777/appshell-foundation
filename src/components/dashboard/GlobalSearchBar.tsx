@@ -362,7 +362,7 @@ export function GlobalSearchBar() {
             variant="secondary"
             size="sm"
             onClick={() => handleChipClick(chip)}
-            className="h-7 px-3 text-xs font-medium focus-visible:ring-2 focus-visible:ring-ring"
+            className="h-7 px-3 text-xs font-medium focus-visible:ring-2 focus-visible:ring-brand"
           >
             {chip}
           </Button>

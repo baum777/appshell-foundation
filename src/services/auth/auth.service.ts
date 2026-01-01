@@ -21,7 +21,8 @@ export interface User {
 }
 
 export interface UserPreferences {
-  theme: 'light' | 'dark' | 'system';
+  // Dark-only in v1 UI (no light/system mode exposed).
+  theme: 'dark';
   language: 'en' | 'de';
   timezone: string;
   notifications: {

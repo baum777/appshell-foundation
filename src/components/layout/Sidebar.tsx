@@ -38,7 +38,7 @@ export function Sidebar({ collapsed, onCollapsedChange }: SidebarProps) {
         data-testid={item.testId}
         className={cn(
           "flex items-center gap-3 px-3 py-2.5 rounded-md transition-all duration-200",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
           isActive ? "nav-item-active" : "nav-item-inactive"
         )}
         aria-current={isActive ? "page" : undefined}
@@ -95,7 +95,7 @@ export function Sidebar({ collapsed, onCollapsedChange }: SidebarProps) {
             className={cn(
               "flex items-center gap-3 px-3 py-2.5 w-full rounded-md transition-all duration-200",
               "text-muted-foreground hover:text-foreground hover:bg-secondary/50",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
             )}
           >
             <ChevronDown

@@ -163,7 +163,7 @@ export function MarketsBanner({
                   <Badge
                     key={symbol}
                     variant={selectedMarket === symbol ? "default" : "secondary"}
-                    className="cursor-pointer shrink-0 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-primary/20 focus-visible:ring-2 focus-visible:ring-ring"
+                    className="cursor-pointer shrink-0 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-primary/20 focus-visible:ring-2 focus-visible:ring-brand"
                     tabIndex={0}
                     role="button"
                     onClick={() => handleSelectMarket(symbol)}
