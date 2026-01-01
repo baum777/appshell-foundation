@@ -1,7 +1,14 @@
 /**
- * Symbol Picker Component
+ * Symbol Picker Component (v1)
  * Shared component for selecting symbols with quick actions
- * Per Global Quick-Actions + Command Palette spec
+ * Per Global UI Infrastructure spec - TASK C
+ * 
+ * Features:
+ * - Recents (localStorage, cap 12, dedupe)
+ * - Watchlist (existing local source)
+ * - Symbol heuristic (len >= 32 + no spaces = Contract)
+ * - Keyboard navigation (↑↓ Enter Esc)
+ * - One-tap actions per symbol
  */
 
 import * as React from 'react';
@@ -14,7 +21,8 @@ import {
   Star, 
   Clock, 
   List,
-  ChevronRight 
+  ChevronRight,
+  FileText 
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,11 +31,12 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { makeWatchlist } from '@/stubs/fixtures';
 import { useQuickActions } from './QuickActionsContext';
+import { useOffline } from '@/components/offline';
 import type { SymbolItem } from './types';
 
-// Local storage key for recent symbols
-const RECENTS_KEY = 'sparkfined_recent_symbols_v1';
-const MAX_RECENTS = 5;
+// Local storage key for recent symbols - per spec
+const RECENTS_KEY = 'sparkfined_symbol_recents_v1';
+const MAX_RECENTS = 12; // Per spec: cap 12
 
 function getRecentSymbols(): SymbolItem[] {
   try {
@@ -40,12 +49,22 @@ function getRecentSymbols(): SymbolItem[] {
 
 function addRecentSymbol(symbol: SymbolItem) {
   try {
+    // Dedupe by symbol
     const recents = getRecentSymbols().filter((s) => s.symbol !== symbol.symbol);
     recents.unshift({ ...symbol, isRecent: true });
     localStorage.setItem(RECENTS_KEY, JSON.stringify(recents.slice(0, MAX_RECENTS)));
   } catch {
     // Ignore storage errors
   }
+}
+
+/**
+ * Symbol type heuristic per spec:
+ * - len >= 32 and no spaces → Contract
+ * - else → Ticker
+ */
+function getSymbolType(symbol: string): 'contract' | 'ticker' {
+  return symbol.length >= 32 && !symbol.includes(' ') ? 'contract' : 'ticker';
 }
 
 interface SymbolPickerProps {
@@ -57,9 +76,13 @@ interface SymbolPickerProps {
 
 export function SymbolPicker({ onSelect, onBack, showBackButton = true, className }: SymbolPickerProps) {
   const navigate = useNavigate();
-  const { close, isOffline } = useQuickActions();
+  const { close } = useQuickActions();
+  const { isOnline, markQueued } = useOffline();
   const [search, setSearch] = React.useState('');
   const [expandedSymbol, setExpandedSymbol] = React.useState<string | null>(null);
+  const [selectedIndex, setSelectedIndex] = React.useState(-1);
+  const inputRef = React.useRef<HTMLInputElement>(null);
+  const listRef = React.useRef<HTMLDivElement>(null);
   
   // Get watchlist and recents
   const watchlist = React.useMemo(() => makeWatchlist(8).map(w => ({ 
@@ -101,35 +124,107 @@ export function SymbolPicker({ onSelect, onBack, showBackButton = true, classNam
         s.name.toLowerCase().includes(term)
     );
   }, [recents, watchlist, search]);
+
+  // Flat list for keyboard navigation
+  const flatSymbolList = React.useMemo(() => {
+    const list: SymbolItem[] = [];
+    if (!search && recents.length > 0) {
+      list.push(...recents);
+    }
+    filteredSymbols
+      .filter((s) => s.isWatchlist && (!search || !s.isRecent))
+      .forEach((s) => {
+        if (!list.find((x) => x.symbol === s.symbol)) {
+          list.push(s);
+        }
+      });
+    return list;
+  }, [filteredSymbols, recents, search]);
+
+  // Reset selection on search change
+  React.useEffect(() => {
+    setSelectedIndex(-1);
+    setExpandedSymbol(null);
+  }, [search]);
+
+  // Keyboard navigation
+  React.useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSelectedIndex((prev) => 
+          prev < flatSymbolList.length - 1 ? prev + 1 : prev
+        );
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSelectedIndex((prev) => (prev > 0 ? prev - 1 : -1));
+      } else if (e.key === 'Enter' && selectedIndex >= 0) {
+        e.preventDefault();
+        const symbol = flatSymbolList[selectedIndex];
+        if (symbol) {
+          if (expandedSymbol === symbol.symbol) {
+            // If already expanded, trigger default action (chart)
+            handleAction(symbol, 'chart');
+          } else {
+            setExpandedSymbol(symbol.symbol);
+          }
+        }
+      } else if (e.key === 'Escape') {
+        if (expandedSymbol) {
+          setExpandedSymbol(null);
+        }
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [selectedIndex, flatSymbolList, expandedSymbol]);
+
+  // Scroll selected item into view
+  React.useEffect(() => {
+    if (selectedIndex >= 0 && listRef.current) {
+      const items = listRef.current.querySelectorAll('[data-symbol-row]');
+      const item = items[selectedIndex];
+      if (item) {
+        item.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }
+  }, [selectedIndex]);
   
   const handleAction = React.useCallback((symbol: SymbolItem, action: 'chart' | 'replay' | 'alert' | 'journal') => {
     addRecentSymbol(symbol);
+    
+    // Handle offline state
+    if (!isOnline) {
+      markQueued(`${action} action for ${symbol.symbol}`);
+    }
     
     if (onSelect) {
       onSelect(symbol, action);
       return;
     }
     
-    // Default navigation behavior
+    // Default navigation behavior per spec
     switch (action) {
       case 'chart':
-        navigate(`/chart?symbol=${symbol.symbol}`);
+        navigate(`/chart?query=${encodeURIComponent(symbol.symbol)}`);
         break;
       case 'replay':
-        navigate(`/chart?symbol=${symbol.symbol}&mode=replay`);
+        navigate(`/chart?replay=true&query=${encodeURIComponent(symbol.symbol)}`);
         break;
       case 'alert':
-        navigate(`/alerts?create=true&symbol=${symbol.symbol}`);
+        navigate(`/alerts?symbol=${encodeURIComponent(symbol.symbol)}`);
         break;
       case 'journal':
-        navigate(`/journal?create=true&symbol=${symbol.symbol}`);
+        navigate('/journal');
         break;
     }
     
     close();
-  }, [navigate, close, onSelect]);
+  }, [navigate, close, onSelect, isOnline, markQueued]);
   
-  const handleSymbolClick = React.useCallback((symbol: SymbolItem) => {
+  const handleSymbolClick = React.useCallback((symbol: SymbolItem, index: number) => {
+    setSelectedIndex(index);
     if (expandedSymbol === symbol.symbol) {
       setExpandedSymbol(null);
     } else {
@@ -152,17 +247,21 @@ export function SymbolPicker({ onSelect, onBack, showBackButton = true, classNam
           </Button>
         )}
         <Input
+          ref={inputRef}
           placeholder="Search symbol..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="h-9"
           autoFocus
         />
+        <p className="text-xs text-muted-foreground mt-1.5">
+          ↑↓ to navigate, Enter to expand, Esc to close
+        </p>
       </div>
       
       {/* Symbol List */}
       <ScrollArea className="flex-1 max-h-[300px]">
-        <div className="p-2">
+        <div ref={listRef} className="p-2">
           {/* Recents section */}
           {recents.length > 0 && !search && (
             <div className="mb-3">
@@ -170,14 +269,15 @@ export function SymbolPicker({ onSelect, onBack, showBackButton = true, classNam
                 <Clock className="h-3 w-3" />
                 Recents
               </div>
-              {recents.map((symbol) => (
+              {recents.map((symbol, idx) => (
                 <SymbolRow
                   key={`recent-${symbol.symbol}`}
                   symbol={symbol}
                   isExpanded={expandedSymbol === symbol.symbol}
-                  onClick={() => handleSymbolClick(symbol)}
+                  isSelected={selectedIndex === idx}
+                  onClick={() => handleSymbolClick(symbol, idx)}
                   onAction={(action) => handleAction(symbol, action)}
-                  isOffline={isOffline}
+                  isOffline={!isOnline}
                 />
               ))}
             </div>
@@ -192,16 +292,20 @@ export function SymbolPicker({ onSelect, onBack, showBackButton = true, classNam
               </div>
               {filteredSymbols
                 .filter((s) => s.isWatchlist && (!search || !s.isRecent))
-                .map((symbol) => (
-                  <SymbolRow
-                    key={`watch-${symbol.symbol}`}
-                    symbol={symbol}
-                    isExpanded={expandedSymbol === symbol.symbol}
-                    onClick={() => handleSymbolClick(symbol)}
-                    onAction={(action) => handleAction(symbol, action)}
-                    isOffline={isOffline}
-                  />
-                ))}
+                .map((symbol, idx) => {
+                  const globalIdx = search ? idx : recents.length + idx;
+                  return (
+                    <SymbolRow
+                      key={`watch-${symbol.symbol}`}
+                      symbol={symbol}
+                      isExpanded={expandedSymbol === symbol.symbol}
+                      isSelected={selectedIndex === globalIdx}
+                      onClick={() => handleSymbolClick(symbol, globalIdx)}
+                      onAction={(action) => handleAction(symbol, action)}
+                      isOffline={!isOnline}
+                    />
+                  );
+                })}
             </div>
           )}
           
@@ -214,7 +318,7 @@ export function SymbolPicker({ onSelect, onBack, showBackButton = true, classNam
       </ScrollArea>
       
       {/* Offline indicator */}
-      {isOffline && (
+      {!isOnline && (
         <div className="p-2 border-t border-border bg-warning/10">
           <p className="text-xs text-warning text-center">
             Offline — Actions will be queued
@@ -228,30 +332,40 @@ export function SymbolPicker({ onSelect, onBack, showBackButton = true, classNam
 interface SymbolRowProps {
   symbol: SymbolItem;
   isExpanded: boolean;
+  isSelected: boolean;
   onClick: () => void;
   onAction: (action: 'chart' | 'replay' | 'alert' | 'journal') => void;
   isOffline: boolean;
 }
 
-function SymbolRow({ symbol, isExpanded, onClick, onAction, isOffline }: SymbolRowProps) {
+function SymbolRow({ symbol, isExpanded, isSelected, onClick, onAction, isOffline }: SymbolRowProps) {
+  const symbolType = getSymbolType(symbol.symbol);
+  
   return (
-    <div className="mb-1">
+    <div className="mb-1" data-symbol-row>
       <button
         onClick={onClick}
         className={cn(
           'w-full flex items-center justify-between px-2 py-2 rounded-md text-left',
           'hover:bg-accent/50 transition-colors',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-          isExpanded && 'bg-accent/30'
+          isExpanded && 'bg-accent/30',
+          isSelected && 'bg-accent/20 ring-1 ring-ring/50'
         )}
       >
-        <div className="flex items-center gap-2">
-          <span className="font-medium text-sm">{symbol.symbol}</span>
-          <span className="text-xs text-muted-foreground">{symbol.name}</span>
-          {symbol.isFavorite && <Star className="h-3 w-3 text-warning fill-warning" />}
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="font-medium text-sm truncate">{symbol.symbol}</span>
+          <span className="text-xs text-muted-foreground truncate">{symbol.name}</span>
+          {symbol.isFavorite && <Star className="h-3 w-3 text-warning fill-warning flex-shrink-0" />}
+          {symbolType === 'contract' && (
+            <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 flex-shrink-0">
+              <FileText className="h-2.5 w-2.5 mr-0.5" />
+              Contract
+            </Badge>
+          )}
         </div>
         <ChevronRight className={cn(
-          'h-4 w-4 text-muted-foreground transition-transform',
+          'h-4 w-4 text-muted-foreground transition-transform flex-shrink-0',
           isExpanded && 'rotate-90'
         )} />
       </button>
@@ -262,7 +376,7 @@ function SymbolRow({ symbol, isExpanded, onClick, onAction, isOffline }: SymbolR
           <Button
             variant="ghost"
             size="sm"
-            className="flex-1 h-8 text-xs"
+            className="flex-1 h-8 text-xs min-h-[32px]"
             onClick={() => onAction('chart')}
           >
             <LineChart className="h-3.5 w-3.5 mr-1" />
@@ -271,7 +385,7 @@ function SymbolRow({ symbol, isExpanded, onClick, onAction, isOffline }: SymbolR
           <Button
             variant="ghost"
             size="sm"
-            className="flex-1 h-8 text-xs"
+            className="flex-1 h-8 text-xs min-h-[32px]"
             onClick={() => onAction('replay')}
           >
             <Play className="h-3.5 w-3.5 mr-1" />
@@ -280,7 +394,7 @@ function SymbolRow({ symbol, isExpanded, onClick, onAction, isOffline }: SymbolR
           <Button
             variant="ghost"
             size="sm"
-            className="flex-1 h-8 text-xs"
+            className="flex-1 h-8 text-xs min-h-[32px]"
             onClick={() => onAction('alert')}
           >
             <Bell className="h-3.5 w-3.5 mr-1" />
@@ -289,7 +403,7 @@ function SymbolRow({ symbol, isExpanded, onClick, onAction, isOffline }: SymbolR
           <Button
             variant="ghost"
             size="sm"
-            className="flex-1 h-8 text-xs"
+            className="flex-1 h-8 text-xs min-h-[32px]"
             onClick={() => onAction('journal')}
           >
             <BookOpen className="h-3.5 w-3.5 mr-1" />

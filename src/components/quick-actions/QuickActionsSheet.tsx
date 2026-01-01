@@ -1,7 +1,7 @@
 /**
  * Quick Actions Sheet (Mobile)
  * Bottom sheet with swipe-to-close
- * Per Global Quick-Actions + Command Palette spec
+ * Per Global UI Infrastructure spec
  */
 
 import * as React from 'react';
@@ -11,7 +11,6 @@ import {
   Play,
   Bell,
   BookOpen,
-  Search,
   LayoutDashboard,
   Eye,
   Compass,
@@ -28,14 +27,15 @@ import {
   DrawerClose,
 } from '@/components/ui/drawer';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { useQuickActions } from './QuickActionsContext';
+import { useOffline } from '@/components/offline';
 import { SymbolPicker } from './SymbolPicker';
 
 export function QuickActionsSheet() {
   const navigate = useNavigate();
-  const { isOpen, close, mode, setMode, isOffline } = useQuickActions();
+  const { isOpen, close, mode, setMode } = useQuickActions();
+  const { isOnline } = useOffline();
 
   // Only show on mobile
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
@@ -142,7 +142,7 @@ export function QuickActionsSheet() {
             </div>
 
             {/* Offline indicator */}
-            {isOffline && (
+            {!isOnline && (
               <div className="mt-4 p-2 rounded-md bg-warning/10 text-center">
                 <p className="text-xs text-warning">
                   Offline — Actions will be queued
@@ -175,7 +175,8 @@ function ActionButton({ icon, label, onClick }: ActionButtonProps) {
       className={cn(
         'flex flex-col items-center justify-center gap-1.5 p-3 rounded-lg',
         'bg-muted/50 hover:bg-muted transition-colors',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        'min-h-[64px]'
       )}
     >
       <div className="text-primary">{icon}</div>
@@ -197,7 +198,8 @@ function NavButton({ icon, label, onClick }: NavButtonProps) {
       className={cn(
         'w-full flex items-center gap-3 px-3 py-2.5 rounded-md',
         'hover:bg-accent/50 transition-colors text-left',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        'min-h-[44px]'
       )}
     >
       <span className="text-muted-foreground">{icon}</span>

@@ -33,5 +33,4 @@ export interface QuickActionsContextValue {
   setSelectedSymbol: (symbol: string | null) => void;
   symbolAction: 'chart' | 'replay' | 'alert' | 'journal' | null;
   setSymbolAction: (action: 'chart' | 'replay' | 'alert' | 'journal' | null) => void;
-  isOffline: boolean;
 }

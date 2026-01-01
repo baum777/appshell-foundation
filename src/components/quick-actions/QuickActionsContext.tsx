@@ -1,12 +1,10 @@
 /**
  * Quick Actions Context & Provider
  * Global state for quick actions and command palette
- * Per Global Quick-Actions + Command Palette spec
+ * Per Global UI Infrastructure spec
  */
 
 import * as React from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { toast } from 'sonner';
 import type { QuickActionsContextValue } from './types';
 
 const QuickActionsContext = React.createContext<QuickActionsContextValue | null>(null);
@@ -20,9 +18,6 @@ export function QuickActionsProvider({ children }: QuickActionsProviderProps) {
   const [mode, setMode] = React.useState<'actions' | 'symbol-picker'>('actions');
   const [selectedSymbol, setSelectedSymbol] = React.useState<string | null>(null);
   const [symbolAction, setSymbolAction] = React.useState<'chart' | 'replay' | 'alert' | 'journal' | null>(null);
-  const [isOffline, setIsOffline] = React.useState(!navigator.onLine);
-  const navigate = useNavigate();
-  const location = useLocation();
 
   // Handle keyboard shortcut (⌘K / Ctrl+K)
   React.useEffect(() => {
@@ -51,24 +46,6 @@ export function QuickActionsProvider({ children }: QuickActionsProviderProps) {
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isOpen]);
-
-  // Online/offline detection
-  React.useEffect(() => {
-    function handleOnline() {
-      setIsOffline(false);
-    }
-    function handleOffline() {
-      setIsOffline(true);
-    }
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
 
   // Reset mode when closing
   React.useEffect(() => {
@@ -103,7 +80,6 @@ export function QuickActionsProvider({ children }: QuickActionsProviderProps) {
     setSelectedSymbol,
     symbolAction,
     setSymbolAction,
-    isOffline,
   };
 
   return (

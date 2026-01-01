@@ -1,13 +1,12 @@
 /**
  * Command Palette (Desktop)
  * ⌘K / Ctrl+K dialog with cmdk
- * Per Global Quick-Actions + Command Palette spec
+ * Per Global UI Infrastructure spec
  */
 
 import * as React from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Search,
   LineChart,
   Play,
   Bell,
@@ -17,7 +16,6 @@ import {
   LayoutDashboard,
   Eye,
   GraduationCap,
-  Zap,
 } from 'lucide-react';
 import {
   CommandDialog,
@@ -30,18 +28,20 @@ import {
   CommandSeparator,
 } from '@/components/ui/command';
 import { useQuickActions } from './QuickActionsContext';
+import { useOffline } from '@/components/offline';
 import { SymbolPicker } from './SymbolPicker';
 
 export function CommandPalette() {
   const navigate = useNavigate();
-  const { isOpen, close, mode, setMode, isOffline } = useQuickActions();
+  const { isOpen, close, mode, setMode } = useQuickActions();
+  const { isOnline } = useOffline();
 
   const handleNavigation = React.useCallback((path: string) => {
     navigate(path);
     close();
   }, [navigate, close]);
 
-  const handleSymbolAction = React.useCallback((actionType: 'chart' | 'replay' | 'alert' | 'journal') => {
+  const handleSymbolAction = React.useCallback(() => {
     setMode('symbol-picker');
   }, [setMode]);
 
@@ -59,12 +59,12 @@ export function CommandPalette() {
             
             {/* Quick Actions */}
             <CommandGroup heading="Quick Actions">
-              <CommandItem onSelect={() => handleSymbolAction('chart')}>
+              <CommandItem onSelect={handleSymbolAction}>
                 <LineChart className="mr-2 h-4 w-4" />
                 <span>Open Chart</span>
                 <CommandShortcut>→ Pick Symbol</CommandShortcut>
               </CommandItem>
-              <CommandItem onSelect={() => handleSymbolAction('replay')}>
+              <CommandItem onSelect={handleSymbolAction}>
                 <Play className="mr-2 h-4 w-4" />
                 <span>Open Replay</span>
                 <CommandShortcut>→ Pick Symbol</CommandShortcut>
@@ -118,7 +118,7 @@ export function CommandPalette() {
             </CommandGroup>
             
             {/* Offline indicator */}
-            {isOffline && (
+            {!isOnline && (
               <>
                 <CommandSeparator />
                 <div className="px-2 py-1.5 text-xs text-warning text-center bg-warning/10">
