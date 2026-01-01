@@ -31,7 +31,7 @@ export function LessonCard({ lesson, onLockedClick }: LessonCardProps) {
     if (lesson.locked) {
       onLockedClick(lesson);
     } else {
-      navigate(`/lessons/${lesson.id}`);
+      navigate(`/learn/${lesson.id}`);
       // BACKEND_TODO: lesson detail route or dialog preview
     }
   };

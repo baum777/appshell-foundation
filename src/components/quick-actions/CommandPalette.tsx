@@ -83,7 +83,7 @@ export function CommandPalette() {
             
             {/* Navigation */}
             <CommandGroup heading="Navigate">
-              <CommandItem onSelect={() => handleNavigation('/')}>
+              <CommandItem onSelect={() => handleNavigation('/dashboard')}>
                 <LayoutDashboard className="mr-2 h-4 w-4" />
                 <span>Dashboard</span>
               </CommandItem>
@@ -107,9 +107,9 @@ export function CommandPalette() {
                 <Compass className="mr-2 h-4 w-4" />
                 <span>Oracle</span>
               </CommandItem>
-              <CommandItem onSelect={() => handleNavigation('/lessons')}>
+              <CommandItem onSelect={() => handleNavigation('/learn')}>
                 <GraduationCap className="mr-2 h-4 w-4" />
-                <span>Lessons</span>
+                <span>Learn</span>
               </CommandItem>
               <CommandItem onSelect={() => handleNavigation('/settings')}>
                 <Settings className="mr-2 h-4 w-4" />

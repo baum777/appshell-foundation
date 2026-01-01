@@ -2,15 +2,16 @@ import {
   LayoutDashboard,
   BookOpen,
   LineChart,
+  Play,
   Bell,
   Settings,
   PenLine,
   Eye,
   Sparkles,
   BookMarked,
-  ChevronDown,
   type LucideIcon,
 } from "lucide-react";
+import { primaryTabs, type PrimaryTabKey } from "@/routes/routes";
 
 export interface NavItem {
   label: string;
@@ -29,87 +30,44 @@ export interface NavGroup {
   featureFlag?: string;
 }
 
-export const primaryNavItems: NavItem[] = [
-  {
-    label: "Dashboard",
-    path: "/",
-    icon: LayoutDashboard,
-    testId: "nav-dashboard",
-  },
-  {
-    label: "Journal",
-    path: "/journal",
-    icon: PenLine,
-    testId: "nav-journal",
-  },
-  {
-    label: "Learn",
-    path: "/lessons",
-    icon: BookOpen,
-    testId: "nav-learn",
-    activeRoutes: ["/lessons"],
-  },
-  {
-    label: "Chart",
-    path: "/chart",
-    icon: LineChart,
-    testId: "nav-chart",
-    activeRoutes: ["/chart", "/chart/replay", "/replay"],
-  },
-  {
-    label: "Alerts",
-    path: "/alerts",
-    icon: Bell,
-    testId: "nav-alerts",
-  },
-  {
-    label: "Settings",
-    path: "/settings",
-    icon: Settings,
-    testId: "nav-settings",
-  },
-];
+const iconByTab: Record<PrimaryTabKey, LucideIcon> = {
+  dashboard: LayoutDashboard,
+  journal: PenLine,
+  chart: LineChart,
+  replay: Play,
+  alerts: Bell,
+  watchlist: Eye,
+  oracle: Sparkles,
+  learn: BookOpen,
+  handbook: BookMarked,
+  settings: Settings,
+};
 
-// Sidebar-only nav items (Watchlist + Oracle always visible, Handbook under dev flag)
-export const sidebarOnlyItems: NavItem[] = [
-  {
-    label: "Watchlist",
-    path: "/watchlist",
-    icon: Eye,
-    testId: "nav-watchlist",
-  },
-  {
-    label: "Oracle",
-    path: "/oracle",
-    icon: Sparkles,
-    testId: "nav-oracle",
-  },
-];
+export const primaryNavItems: NavItem[] = primaryTabs.map((tab) => ({
+  label: tab.label,
+  path: tab.route,
+  icon: iconByTab[tab.key],
+  testId: tab.tabTestId,
+  activeRoutes:
+    tab.key === "dashboard"
+      ? ["/dashboard", "/"]
+      : tab.key === "settings"
+        ? ["/settings"]
+        : [tab.route],
+}));
 
+// Sidebar-only nav is no longer segmented; keep exports for backward compatibility.
+export const sidebarOnlyItems: NavItem[] = [];
 export const advancedNavGroup: NavGroup = {
   label: "Advanced",
   testId: "nav-advanced",
   triggerTestId: "nav-advanced-trigger",
-  icon: ChevronDown,
-  featureFlag: "VITE_ENABLE_DEV_NAV",
-  items: [
-    {
-      label: "Handbook",
-      path: "/handbook",
-      icon: BookMarked,
-      testId: "nav-handbook",
-    },
-  ],
+  icon: LayoutDashboard,
+  items: [],
 };
 
-// Mobile nav shows subset of primary items
-export const mobileNavItems: NavItem[] = [
-  primaryNavItems[0], // Dashboard
-  primaryNavItems[1], // Journal
-  primaryNavItems[2], // Learn
-  primaryNavItems[3], // Chart
-  primaryNavItems[5], // Settings
-];
+// Mobile nav should expose all primary tabs (scrollable UI handles overflow)
+export const mobileNavItems: NavItem[] = primaryNavItems;
 
 export function isRouteActive(currentPath: string, navItem: NavItem): boolean {
   if (navItem.activeRoutes) {

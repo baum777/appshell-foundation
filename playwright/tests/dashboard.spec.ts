@@ -13,10 +13,10 @@ test.describe('Dashboard', () => {
 
   test('sollte Dashboard-Seite korrekt laden', async ({ page }) => {
     // Warte darauf, dass die Seite geladen ist
-    await expect(page).toHaveURL('/');
+    await expect(page).toHaveURL('/dashboard');
     
     // Prüfe ob Header vorhanden ist
-    const header = page.locator('header');
+    const header = page.getByRole('banner');
     await expect(header).toBeVisible();
     
     // Prüfe ob main content vorhanden ist

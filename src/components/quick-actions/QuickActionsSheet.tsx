@@ -107,7 +107,7 @@ export function QuickActionsSheet() {
               <NavButton
                 icon={<LayoutDashboard className="h-4 w-4" />}
                 label="Dashboard"
-                onClick={() => handleNavigation('/')}
+                onClick={() => handleNavigation('/dashboard')}
               />
               <NavButton
                 icon={<Eye className="h-4 w-4" />}
@@ -131,8 +131,8 @@ export function QuickActionsSheet() {
               />
               <NavButton
                 icon={<GraduationCap className="h-4 w-4" />}
-                label="Lessons"
-                onClick={() => handleNavigation('/lessons')}
+                label="Learn"
+                onClick={() => handleNavigation('/learn')}
               />
               <NavButton
                 icon={<Settings className="h-4 w-4" />}

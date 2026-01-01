@@ -8,76 +8,46 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Navigation', () => {
   test.beforeEach(async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 720 });
     await page.goto('/');
   });
 
-  test('sollte zur Dashboard-Seite navigieren', async ({ page }) => {
-    await page.click('[data-testid="nav-dashboard"]');
-    await expect(page).toHaveURL('/');
-    await expect(page.locator('h1, h2').first()).toBeVisible();
+  test('sollte Root auf /dashboard redirecten', async ({ page }) => {
+    await expect(page).toHaveURL('/dashboard');
+    await expect(page.locator('[data-testid="page-dashboard"]')).toBeVisible();
   });
 
-  test('sollte zur Journal-Seite navigieren', async ({ page }) => {
-    await page.click('[data-testid="nav-journal"]');
-    await expect(page).toHaveURL('/journal');
-  });
+  test('sollte alle Primary Tabs navigierbar machen', async ({ page }) => {
+    const errors: string[] = [];
+    page.on('pageerror', (err) => errors.push(err.message));
+    page.on('console', (msg) => {
+      if (msg.type() === 'error') errors.push(msg.text());
+    });
 
-  test('sollte zur Learn-Seite navigieren', async ({ page }) => {
-    await page.click('[data-testid="nav-learn"]');
-    await expect(page).toHaveURL('/lessons');
-  });
+    const tabs = [
+      { tab: 'tab-dashboard', url: '/dashboard', page: 'page-dashboard' },
+      { tab: 'tab-journal', url: '/journal', page: 'page-journal' },
+      { tab: 'tab-chart', url: '/chart', page: 'page-chart' },
+      { tab: 'tab-replay', url: '/replay', page: 'page-replay' },
+      { tab: 'tab-alerts', url: '/alerts', page: 'page-alerts' },
+      { tab: 'tab-watchlist', url: '/watchlist', page: 'page-watchlist' },
+      { tab: 'tab-oracle', url: '/oracle', page: 'page-oracle' },
+      { tab: 'tab-learn', url: '/learn', page: 'page-learn' },
+      { tab: 'tab-handbook', url: '/handbook', page: 'page-handbook' },
+      { tab: 'tab-settings', url: '/settings', page: 'page-settings' },
+    ] as const;
 
-  test('sollte zur Chart-Seite navigieren', async ({ page }) => {
-    await page.click('[data-testid="nav-chart"]');
-    await expect(page).toHaveURL('/chart');
-  });
+    const sidebar = page.locator('aside');
 
-  test('sollte zur Alerts-Seite navigieren', async ({ page }) => {
-    await page.click('[data-testid="nav-alerts"]');
-    await expect(page).toHaveURL('/alerts');
-  });
-
-  test('sollte zur Settings-Seite navigieren', async ({ page }) => {
-    await page.click('[data-testid="nav-settings"]');
-    await expect(page).toHaveURL('/settings');
-  });
-});
-
-test.describe('Advanced Navigation', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-  });
-
-  test('sollte Advanced Nav öffnen und schließen können', async ({ page }) => {
-    // Prüfe ob Advanced Nav Trigger vorhanden ist
-    const advancedTrigger = page.locator('[data-testid="nav-advanced-trigger"]');
-    await expect(advancedTrigger).toBeVisible();
-
-    // Klicke zum Schließen
-    await advancedTrigger.click();
-    
-    // Warte kurz für Animation
-    await page.waitForTimeout(300);
-
-    // Klicke zum Öffnen
-    await advancedTrigger.click();
-    
-    // Warte kurz für Animation
-    await page.waitForTimeout(300);
-  });
-
-  test('sollte zur Watchlist navigieren', async ({ page }) => {
-    const watchlistLink = page.locator('[data-testid="nav-watchlist"]');
-    await expect(watchlistLink).toBeVisible();
-    await watchlistLink.click();
-    await expect(page).toHaveURL('/watchlist');
-  });
-
-  test('sollte zur Oracle-Seite navigieren', async ({ page }) => {
-    const oracleLink = page.locator('[data-testid="nav-oracle"]');
-    await expect(oracleLink).toBeVisible();
-    await oracleLink.click();
-    await expect(page).toHaveURL('/oracle');
+    for (const t of tabs) {
+      await sidebar.locator(`[data-testid="${t.tab}"]`).click();
+      await expect(page).toHaveURL(t.url);
+      await page.waitForTimeout(250);
+      if (errors.length > 0) {
+        throw new Error(`Console/Page errors:\n- ${errors.join('\n- ')}`);
+      }
+      await expect(page.locator(`[data-testid="${t.page}"]`)).toBeVisible({ timeout: 15000 });
+    }
   });
 });
 
@@ -94,43 +64,47 @@ test.describe('Mobile Navigation', () => {
     await expect(sidebar).not.toBeVisible();
 
     // Bottom Nav sollte sichtbar sein (implizit durch Navigation-Items)
-    const dashboardNav = page.locator('[data-testid="nav-dashboard"]');
+    const bottomNav = page.getByRole('navigation', { name: 'Main navigation' });
+    const dashboardNav = bottomNav.locator('[data-testid="tab-dashboard"]');
     await expect(dashboardNav).toBeVisible();
   });
 
   test('sollte mobile Navigation funktionieren', async ({ page }) => {
+    const bottomNav = page.getByRole('navigation', { name: 'Main navigation' });
     // Navigiere zu Journal
-    await page.click('[data-testid="nav-journal"]');
+    await bottomNav.locator('[data-testid="tab-journal"]').click();
     await expect(page).toHaveURL('/journal');
 
     // Navigiere zu Learn
-    await page.click('[data-testid="nav-learn"]');
-    await expect(page).toHaveURL('/lessons');
+    await bottomNav.locator('[data-testid="tab-learn"]').click();
+    await expect(page).toHaveURL('/learn');
 
     // Navigiere zu Settings
-    await page.click('[data-testid="nav-settings"]');
+    await bottomNav.locator('[data-testid="tab-settings"]').click();
     await expect(page).toHaveURL('/settings');
   });
 });
 
 test.describe('Active Route Highlighting', () => {
   test.beforeEach(async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 720 });
     await page.goto('/');
   });
 
   test('sollte aktive Route highlighten', async ({ page }) => {
     // Navigiere zu Journal
-    await page.click('[data-testid="nav-journal"]');
+    const sidebar = page.locator('aside');
+    await sidebar.locator('[data-testid="tab-journal"]').click();
     
     // Prüfe ob Journal-Link die active Klasse hat
-    const journalLink = page.locator('[data-testid="nav-journal"]');
+    const journalLink = sidebar.locator('[data-testid="tab-journal"]');
     await expect(journalLink).toHaveClass(/nav-item-active/);
   });
 
-  test('sollte Dashboard als aktiv markieren bei Root-Route', async ({ page }) => {
-    await page.goto('/');
-    
-    const dashboardLink = page.locator('[data-testid="nav-dashboard"]');
+  test('sollte Dashboard als aktiv markieren bei /dashboard', async ({ page }) => {
+    await page.goto('/dashboard');
+
+    const dashboardLink = page.locator('aside').locator('[data-testid="tab-dashboard"]');
     await expect(dashboardLink).toHaveClass(/nav-item-active/);
   });
 });
@@ -164,5 +138,12 @@ test.describe('Responsive Sidebar', () => {
     const sidebar = page.locator('aside');
     const sidebarBox = await sidebar.boundingBox();
     expect(sidebarBox?.width).toBeLessThan(100); // Collapsed width ~64px
+  });
+});
+
+test.describe('404', () => {
+  test('unbekannte Route sollte NotFound anzeigen', async ({ page }) => {
+    await page.goto('/this-route-does-not-exist');
+    await expect(page.locator('[data-testid="page-notfound"]')).toBeVisible();
   });
 });
