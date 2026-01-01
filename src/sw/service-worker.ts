@@ -1,3 +1,5 @@
+/// <reference lib="webworker" />
+
 /**
  * Service Worker Entry Point
  * Per SW_SPEC.md
@@ -8,7 +10,7 @@ import { pollAlertEvents } from './sw-alerts';
 import { pollOracleDaily } from './sw-oracle';
 import type { SwMessage, SwNotificationData, SwStatusMessage } from './sw-contracts';
 
-declare const self: ServiceWorkerGlobalScope;
+declare const self: ServiceWorkerGlobalScope & typeof globalThis;
 
 // Current access token (received from UI)
 let accessToken: string | null = null;

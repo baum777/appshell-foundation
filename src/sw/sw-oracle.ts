@@ -1,3 +1,5 @@
+/// <reference lib="webworker" />
+
 /**
  * Service Worker Oracle Handler
  * Polls for daily feed and shows notifications
@@ -11,6 +13,8 @@ import {
 } from './sw-contracts';
 import { isDeduplicated, addDedupe } from './sw-storage';
 import { shouldPoll, recordPollSuccess, recordPollFailure, handleRateLimit } from './sw-scheduler';
+
+declare const self: ServiceWorkerGlobalScope & typeof globalThis;
 
 const API_BASE = '/api';
 
@@ -108,8 +112,7 @@ async function showTakeawayNotification(feed: OracleDailyFeed): Promise<void> {
   };
   
   if (typeof self !== 'undefined' && 'registration' in self) {
-    const registration = (self as unknown as ServiceWorkerGlobalScope).registration;
-    await registration.showNotification("Today's Takeaway", {
+    await self.registration.showNotification("Today's Takeaway", {
       body: feed.pinned.title,
       icon: '/favicon.ico',
       tag: 'oracle-takeaway',
@@ -138,8 +141,7 @@ async function showNewInsightsNotification(count: number): Promise<void> {
   };
   
   if (typeof self !== 'undefined' && 'registration' in self) {
-    const registration = (self as unknown as ServiceWorkerGlobalScope).registration;
-    await registration.showNotification('New Oracle Insights', {
+    await self.registration.showNotification('New Oracle Insights', {
       body: `${count} new insight${count > 1 ? 's' : ''} available`,
       icon: '/favicon.ico',
       tag: 'oracle-new',
