@@ -1,0 +1,76 @@
+import { beforeAll, afterAll, beforeEach } from 'vitest';
+import { initDatabase, closeDatabase, getDatabase, resetDatabase } from '../src/db/sqlite';
+import { runMigrations } from '../src/db/migrate';
+import { resetEnvCache } from '../src/config/env';
+import { resetConfigCache } from '../src/config/config';
+import { join } from 'path';
+import { unlinkSync, existsSync, mkdirSync } from 'fs';
+
+// Test database path - use unique path per test run
+const TEST_DB_PATH = `./.data/test-${process.pid}.sqlite`;
+
+// Set test environment
+process.env.NODE_ENV = 'test';
+process.env.DATABASE_URL = `sqlite:${TEST_DB_PATH}`;
+process.env.BACKEND_PORT = '3001';
+process.env.LOG_LEVEL = 'error';
+
+// Ensure data directory exists
+if (!existsSync('./.data')) {
+  mkdirSync('./.data', { recursive: true });
+}
+
+// Clean up any existing test database
+function cleanupTestDb(): void {
+  const files = [TEST_DB_PATH, TEST_DB_PATH + '-wal', TEST_DB_PATH + '-shm'];
+  for (const file of files) {
+    if (existsSync(file)) {
+      try {
+        unlinkSync(file);
+      } catch {
+        // Ignore cleanup errors
+      }
+    }
+  }
+}
+
+beforeAll(() => {
+  // Clean up before starting
+  cleanupTestDb();
+  
+  // Reset caches
+  resetEnvCache();
+  resetConfigCache();
+  resetDatabase();
+  
+  // Initialize test database
+  initDatabase(TEST_DB_PATH);
+  runMigrations(join(process.cwd(), 'migrations'));
+});
+
+beforeEach(() => {
+  // Clear all tables before each test
+  // Order matters for foreign key constraints
+  const db = getDatabase();
+  
+  // Disable foreign keys temporarily for cleanup
+  db.exec('PRAGMA foreign_keys = OFF');
+  
+  db.exec('DELETE FROM journal_confirmations_v1');
+  db.exec('DELETE FROM journal_archives_v1');
+  db.exec('DELETE FROM journal_entries_v1');
+  db.exec('DELETE FROM alert_events_v1');
+  db.exec('DELETE FROM alerts_v1');
+  db.exec('DELETE FROM oracle_read_state_v1');
+  db.exec('DELETE FROM oracle_daily_v1');
+  db.exec('DELETE FROM ta_cache_v1');
+  db.exec('DELETE FROM kv_v1');
+  
+  // Re-enable foreign keys
+  db.exec('PRAGMA foreign_keys = ON');
+});
+
+afterAll(() => {
+  closeDatabase();
+  cleanupTestDb();
+});

@@ -32,3 +32,12 @@ dist-ssr
 # Environment variables
 .env.local
 .env.*.local
+
+# Backend data
+.data/
+backend/dist/
+
+# SQLite
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
