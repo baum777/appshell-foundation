@@ -1,0 +1,102 @@
+/**
+ * Standardized API Response Helpers
+ * Matches API_SPEC.md response envelope contracts
+ */
+
+import type { VercelResponse } from '@vercel/node';
+import { getRequestId } from './request-id';
+
+/**
+ * Success Response Envelope
+ * { data: T, status: number, message?: string }
+ */
+export interface ApiResponse<T> {
+  data: T;
+  status: number;
+  message?: string;
+}
+
+/**
+ * Error Response Envelope
+ * Per API_SPEC.md ErrorResponse
+ */
+export interface ErrorResponse {
+  status: number;
+  message: string;
+  code: string;
+  requestId: string;
+  details?: Record<string, string[]>;
+}
+
+export function sendJson<T>(
+  res: VercelResponse,
+  data: T,
+  status = 200,
+  message?: string
+): void {
+  const response: ApiResponse<T> = {
+    data,
+    status,
+    message,
+  };
+
+  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('x-request-id', getRequestId());
+  res.status(status).json(response);
+}
+
+export function sendCreated<T>(res: VercelResponse, data: T, message?: string): void {
+  sendJson(res, data, 201, message);
+}
+
+export function sendNoContent(res: VercelResponse): void {
+  res.setHeader('x-request-id', getRequestId());
+  res.status(204).end();
+}
+
+export function sendError(
+  res: VercelResponse,
+  status: number,
+  code: string,
+  message: string,
+  details?: Record<string, string[]>
+): void {
+  const response: ErrorResponse = {
+    status,
+    message,
+    code,
+    requestId: getRequestId(),
+    details,
+  };
+
+  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('x-request-id', getRequestId());
+  res.status(status).json(response);
+}
+
+export interface CacheOptions {
+  public?: boolean;
+  maxAge?: number;
+  noStore?: boolean;
+}
+
+export function setCacheHeaders(res: VercelResponse, options: CacheOptions): void {
+  if (options.noStore) {
+    res.setHeader('Cache-Control', 'no-store');
+    return;
+  }
+
+  const directives: string[] = [];
+  
+  if (options.public) {
+    directives.push('public');
+  } else {
+    directives.push('private');
+  }
+  
+  if (options.maxAge !== undefined) {
+    directives.push(`max-age=${options.maxAge}`);
+  }
+
+  res.setHeader('Cache-Control', directives.join(', '));
+}

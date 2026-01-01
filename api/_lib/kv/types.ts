@@ -1,0 +1,94 @@
+/**
+ * KV Store Types
+ * Based on CONTRACTS.md and DATA_STORES.md key patterns
+ */
+
+// KV Key Prefixes - frozen per requirements
+// Note: KV_KEY_MAP.md was not found, deriving from CONTRACTS.md
+export const KV_PREFIX = 'sf:v1:' as const;
+
+export const kvKeys = {
+  // Alerts
+  alertDef: (alertId: string) => `${KV_PREFIX}alerts:def:${alertId}`,
+  alertState: (alertId: string) => `${KV_PREFIX}alerts:state:${alertId}`,
+  alertIndex: () => `${KV_PREFIX}alerts:index`,
+  
+  // Alert emit dedupe
+  alertEmitDedupe: (alertId: string, stage: string, windowId: string) =>
+    `${KV_PREFIX}alerts:emit_dedupe:${alertId}:${stage}:${windowId}`,
+  
+  // Watch candidates (TWO_STAGE)
+  watchIndex: () => `${KV_PREFIX}alerts:watch:index`,
+  watchCandidate: (alertId: string, symbolOrAddress: string, timeframe: string) =>
+    `${KV_PREFIX}alerts:watch:${alertId}:${symbolOrAddress}:${timeframe}`,
+  
+  // Dead token sessions
+  deadSessionIndex: () => `${KV_PREFIX}dead:session:index`,
+  deadSession: (alertId: string, symbolOrAddress: string, timeframe: string) =>
+    `${KV_PREFIX}dead:session:${alertId}:${symbolOrAddress}:${timeframe}`,
+  
+  // Idempotency
+  idempotency: (scope: string, key: string) => `${KV_PREFIX}idem:${scope}:${key}`,
+  
+  // Journal
+  journalEntry: (entryId: string) => `${KV_PREFIX}journal:entry:${entryId}`,
+  journalIndex: () => `${KV_PREFIX}journal:index`,
+  
+  // Oracle
+  oracleSnapshot: (date: string) => `${KV_PREFIX}oracle:snapshot:${date}`,
+  oracleLatest: () => `${KV_PREFIX}oracle:latest`,
+  oracleReadGlobal: () => `${KV_PREFIX}oracle:read:global`,
+  oracleRead: (userId: string, insightId: string) => 
+    `${KV_PREFIX}oracle:read:${userId}:${insightId}`,
+  
+  // TA Cache (includes replay flag per CONTRACTS.md)
+  taCache: (marketKey: string, timeframe: string, replay: boolean, asOfTs: string) =>
+    `${KV_PREFIX}ta:cache:${marketKey}:${timeframe}:${replay}:${asOfTs}`,
+  
+  // Rate limiting
+  rateLimit: (resource: string, id: string, bucket: string) =>
+    `${KV_PREFIX}rl:${resource}:${id}:${bucket}`,
+  
+  // Provider cache
+  cacheCandles: (provider: string, marketKey: string, timeframe: string) =>
+    `${KV_PREFIX}cache:candles:${provider}:${marketKey}:${timeframe}`,
+  cacheHolders: (marketKey: string) =>
+    `${KV_PREFIX}cache:holders:${marketKey}`,
+  
+  // Alert events
+  alertEvent: (eventId: string) => `${KV_PREFIX}events:alert:${eventId}`,
+  alertEventsIndex: () => `${KV_PREFIX}events:alert:index`,
+} as const;
+
+// TTL constants in seconds
+export const kvTTL = {
+  // Idempotency keys: 24h
+  idempotency: 24 * 60 * 60,
+  // Watch candidates: 24h
+  watchCandidate: 24 * 60 * 60,
+  // Dead token session: 13h (12h session + 1h buffer)
+  deadSession: 13 * 60 * 60,
+  // Alert emit dedupe: 24h
+  alertEmitDedupe: 24 * 60 * 60,
+  // Alert events: 30 days
+  alertEvent: 30 * 24 * 60 * 60,
+  // Oracle daily: 36h
+  oracleDaily: 36 * 60 * 60,
+  // TA cache: 24h
+  taCache: 24 * 60 * 60,
+  // Rate limit buckets: 1h
+  rateLimit: 60 * 60,
+  // Provider cache: candles 5min, holders 30min
+  cacheCandles: 5 * 60,
+  cacheHolders: 30 * 60,
+} as const;
+
+// KV Store Interface
+export interface KVStore {
+  get<T>(key: string): Promise<T | null>;
+  set<T>(key: string, value: T, ttlSeconds?: number): Promise<void>;
+  delete(key: string): Promise<boolean>;
+  getByPrefix<T>(prefix: string): Promise<Array<{ key: string; value: T }>>;
+  exists(key: string): Promise<boolean>;
+  incr(key: string, ttlSeconds?: number): Promise<number>;
+}
