@@ -1,5 +1,6 @@
 import { Bell, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { QuickActionsHeaderButton } from "@/components/quick-actions";
 
 export function Header() {
   return (
@@ -12,8 +13,10 @@ export function Header() {
           </span>
         </div>
 
-        {/* Desktop: Empty left side (sidebar has logo) */}
-        <div className="hidden md:block" />
+        {/* Desktop: Quick Actions Button */}
+        <div className="hidden md:block">
+          <QuickActionsHeaderButton />
+        </div>
 
         {/* Right Actions */}
         <div className="flex items-center gap-2">
