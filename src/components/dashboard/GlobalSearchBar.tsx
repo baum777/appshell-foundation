@@ -50,6 +50,41 @@ function inferKind(value: string): "Ticker" | "Contract" {
   return "Ticker";
 }
 
+// ============ Validation helpers ============
+// Ticker: 1-15 chars, allowed charset [A-Z0-9._-]
+const TICKER_REGEX = /^[A-Z0-9._-]{1,15}$/i;
+// Solana contract address: Base58, length 32-44 chars
+const BASE58_REGEX = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+
+interface ValidationResult {
+  isValid: boolean;
+  error: string | null;
+}
+
+function validateSearchInput(value: string): ValidationResult {
+  const v = value.trim();
+  if (!v) {
+    return { isValid: false, error: null }; // Empty is not an error, just invalid
+  }
+  
+  // Check if it's a valid ticker
+  if (TICKER_REGEX.test(v)) {
+    return { isValid: true, error: null };
+  }
+  
+  // Check if it's a valid Solana contract address
+  if (BASE58_REGEX.test(v)) {
+    return { isValid: true, error: null };
+  }
+  
+  // Neither ticker nor contract
+  if (v.length >= 32) {
+    return { isValid: false, error: "Invalid contract address (must be Base58, 32-44 chars)" };
+  }
+  
+  return { isValid: false, error: "Invalid ticker (1-15 chars, A-Z, 0-9, ., _, - only)" };
+}
+
 // ============ Quick chips config ============
 const QUICK_CHIPS = ["SOL", "BONK", "JUP", "WIF"];
 
@@ -63,6 +98,7 @@ export function GlobalSearchBar() {
   const [isOpen, setIsOpen] = useState(false);
   const [isClipboardLoading, setIsClipboardLoading] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   // Load recents on mount
   useEffect(() => {
@@ -86,6 +122,18 @@ export function GlobalSearchBar() {
     (raw?: string) => {
       const value = (raw ?? query).trim();
       if (!value) return;
+
+      // Validate input
+      const validation = validateSearchInput(value);
+      if (!validation.isValid) {
+        if (validation.error) {
+          setValidationError(validation.error);
+        }
+        return;
+      }
+
+      // Clear validation error on successful search
+      setValidationError(null);
 
       setRecents((prev) => {
         const next = upsertRecent(prev, value);
@@ -176,17 +224,20 @@ export function GlobalSearchBar() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setQuery(e.target.value);
+    setValidationError(null); // Clear error on input change
     setIsOpen(true);
     setHighlightedIndex(-1);
   };
 
   const handleRecentSelect = (item: string) => {
     setQuery(item);
+    setValidationError(null);
     doSearch(item);
   };
 
   const handleChipClick = (chip: string) => {
     setQuery(chip);
+    setValidationError(null);
     doSearch(chip);
   };
 
@@ -202,6 +253,8 @@ export function GlobalSearchBar() {
             placeholder="Search token or paste contract..."
             value={query}
             onChange={handleInputChange}
+            aria-invalid={!!validationError}
+            aria-describedby={validationError ? "search-error" : undefined}
             onFocus={handleFocus}
             onKeyDown={handleKeyDown}
             className="pl-10 pr-10 h-11 bg-background border-border"
@@ -292,6 +345,13 @@ export function GlobalSearchBar() {
           </div>
         )}
       </div>
+
+      {/* Validation error */}
+      {validationError && (
+        <p id="search-error" className="text-sm text-destructive" role="alert">
+          {validationError}
+        </p>
+      )}
 
       {/* Quick chips */}
       <div className="flex flex-wrap gap-2">
