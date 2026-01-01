@@ -97,4 +97,52 @@
   .mobile-nav-inactive {
     @apply text-muted-foreground;
   }
+
+  /* Touch gesture utilities */
+  .touch-pan-y {
+    touch-action: pan-y;
+  }
+
+  .touch-pan-x {
+    touch-action: pan-x;
+  }
+
+  .touch-none {
+    touch-action: none;
+  }
+
+  /* Swipe action reveal animations */
+  .swipe-reveal-left {
+    animation: swipe-reveal-left 0.2s ease-out;
+  }
+
+  .swipe-reveal-right {
+    animation: swipe-reveal-right 0.2s ease-out;
+  }
+}
+
+/* Sonner toast swipe styles - per Mobiles Gesten-Konzept */
+[data-sonner-toast][data-swipe="move"] {
+  transition: none !important;
+}
+
+[data-sonner-toast][data-swipe="end"] {
+  transition: transform 0.2s ease-out;
+}
+
+[data-sonner-toast][data-swipe="cancel"] {
+  transition: transform 0.2s ease-out;
+  transform: translateX(0);
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .swipe-reveal-left,
+  .swipe-reveal-right {
+    animation: none;
+  }
+  
+  [data-sonner-toast] {
+    transition: none !important;
+  }
 }

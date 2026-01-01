@@ -1,3 +1,5 @@
+/// <reference lib="webworker" />
+
 /**
  * Service Worker Alerts Handler
  * Polls for alert events and shows notifications
@@ -11,6 +13,8 @@ import {
 } from './sw-contracts';
 import { kvGet, kvSet, isDeduplicated, addDedupe } from './sw-storage';
 import { shouldPoll, recordPollSuccess, recordPollFailure, handleRateLimit } from './sw-scheduler';
+
+declare const self: ServiceWorkerGlobalScope & typeof globalThis;
 
 const ALERTS_LAST_SINCE_KEY = 'alerts:lastSince';
 const API_BASE = '/api';
@@ -166,8 +170,7 @@ async function showAlertNotification(event: AlertEmitted): Promise<void> {
   
   // Use self.registration in service worker context
   if (typeof self !== 'undefined' && 'registration' in self) {
-    const registration = (self as unknown as ServiceWorkerGlobalScope).registration;
-    await registration.showNotification(title, {
+    await self.registration.showNotification(title, {
       body,
       icon: '/favicon.ico',
       tag: `alert-${event.alertId}`,
