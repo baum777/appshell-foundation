@@ -12,10 +12,10 @@ interface InsightCardProps {
 }
 
 const themeColors: Record<string, string> = {
-  bullish: "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20",
-  bearish: "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20",
+  bullish: "bg-success/10 text-success border-success/20",
+  bearish: "bg-destructive/10 text-destructive border-destructive/20",
   neutral: "bg-secondary text-secondary-foreground border-secondary",
-  caution: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
+  caution: "bg-warning/10 text-warning border-warning/20",
 };
 
 function formatTimeAgo(dateString: string): string {

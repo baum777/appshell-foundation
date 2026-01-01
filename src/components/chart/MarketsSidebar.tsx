@@ -84,7 +84,7 @@ function MarketsList({
                   onClick={() => onSelectMarket(market.symbol)}
                   className={cn(
                     "w-full flex items-center justify-between gap-2 p-2 rounded-md text-left transition-colors",
-                    "hover:bg-muted/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    "hover:bg-muted/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand",
                     isSelected && "bg-muted"
                   )}
                 >
@@ -109,7 +109,7 @@ function MarketsList({
                     <Star
                       className={cn(
                         "h-4 w-4",
-                        isFavorite ? "fill-yellow-500 text-yellow-500" : "text-muted-foreground"
+                        isFavorite ? "fill-warning text-warning" : "text-muted-foreground"
                       )}
                     />
                   </Button>

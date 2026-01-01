@@ -385,11 +385,11 @@ export function AITAAnalyzerDialog({
   const getTrendColor = (direction: TrendDirection) => {
     switch (direction) {
       case "Bullish":
-        return "bg-green-500/10 text-green-600 border-green-500/30";
+        return "bg-success/10 text-success border-success/30";
       case "Bearish":
-        return "bg-red-500/10 text-red-600 border-red-500/30";
+        return "bg-destructive/10 text-destructive border-destructive/30";
       default:
-        return "bg-yellow-500/10 text-yellow-600 border-yellow-500/30";
+        return "bg-warning/10 text-warning border-warning/30";
     }
   };
 
@@ -521,7 +521,7 @@ export function AITAAnalyzerDialog({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Card>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-green-600">
+                  <CardTitle className="text-sm font-medium text-success">
                     Support Levels
                   </CardTitle>
                 </CardHeader>
@@ -544,7 +544,7 @@ export function AITAAnalyzerDialog({
 
               <Card>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-red-600">
+                  <CardTitle className="text-sm font-medium text-destructive">
                     Resistance Levels
                   </CardTitle>
                 </CardHeader>
@@ -592,17 +592,17 @@ export function AITAAnalyzerDialog({
                 <CardTitle className="text-sm font-medium">Stop Loss</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="p-3 rounded-md bg-yellow-500/10 border border-yellow-500/20">
+                <div className="p-3 rounded-md bg-warning/10 border border-warning/20">
                   <div className="flex justify-between items-center mb-1">
-                    <span className="text-sm font-medium text-yellow-700">Soft SL</span>
+                    <span className="text-sm font-medium text-warning">Soft SL</span>
                     <span className="font-mono text-sm">{report.stopLoss.soft.level}</span>
                   </div>
                   <p className="text-xs text-muted-foreground">{report.stopLoss.soft.rule}</p>
                 </div>
                 <Separator />
-                <div className="p-3 rounded-md bg-red-500/10 border border-red-500/20">
+                <div className="p-3 rounded-md bg-destructive/10 border border-destructive/20">
                   <div className="flex justify-between items-center mb-1">
-                    <span className="text-sm font-medium text-red-700">Hard SL</span>
+                    <span className="text-sm font-medium text-destructive">Hard SL</span>
                     <span className="font-mono text-sm">{report.stopLoss.hard.level}</span>
                   </div>
                   <p className="text-xs text-muted-foreground">{report.stopLoss.hard.rule}</p>
