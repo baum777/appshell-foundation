@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { fetchGrokPulse } from '../services/grokPulse/client';
-import type { PulseSnapshot } from '../../api/_lib/domain/pulse/types';
+import type { PulseSnapshot } from '../services/grokPulse/types';
 
 interface UseGrokPulseResult {
   data: PulseSnapshot | null;

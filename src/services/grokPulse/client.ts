@@ -1,4 +1,4 @@
-import type { PulseSnapshot, PulseEnvelope } from '../../../../api/_lib/domain/pulse/types';
+import type { PulseSnapshot, PulseEnvelope } from './types';
 
 export async function fetchGrokPulse(query: string): Promise<PulseSnapshot | null> {
   const res = await fetch(`/api/grok-pulse?query=${encodeURIComponent(query)}`);
