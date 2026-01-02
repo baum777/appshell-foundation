@@ -97,6 +97,10 @@ async function maybeSetCached<T>(key: string, value: T, ttlSeconds: number): Pro
   await kv.set(key, value, ttlSeconds);
 }
 
+function isApiEnvelope(value: unknown): value is { data: unknown } {
+  return Boolean(value && typeof value === 'object' && 'data' in value);
+}
+
 function criticOutputSchemaJson(): string {
   return JSON.stringify(
     {
@@ -266,8 +270,8 @@ export async function runReasoning(
               body: JSON.stringify(body),
               signal: controller.signal,
             });
-            const json = await res.json();
-            const payload = json?.data as ReasoningResponse<AnyInsight> | undefined;
+            const json = (await res.json()) as unknown;
+            const payload = (isApiEnvelope(json) ? json.data : null) as ReasoningResponse<AnyInsight> | null;
             if (!payload || typeof payload !== 'object') {
               const error = new Error('Invalid backend response shape');
               (error as any).status = res.status;
@@ -374,11 +378,13 @@ export async function runInsightCritic(
   const version = body.version || REASONING_CONTRACT_VERSION;
   const model = env.OPUS_MODEL || 'gpt-4o-mini';
 
+  // Critic depends on both context + insight; include insight in the hashed context to avoid collisions.
+  const contextForKey: JsonObject = { ...body.context, __insight: body.insight };
   const { key: cacheKey } = buildReasoningCacheKey({
     type: 'insight-critic',
     referenceId: body.referenceId,
     version,
-    context: body.context,
+    context: contextForKey,
   });
 
   const kvKey = kvKeys.reasoningCache('insight-critic', body.referenceId, version, cacheKey);

@@ -337,11 +337,13 @@ export async function runInsightCritic(
     context: body.context,
   });
 
+  // Critic depends on both context + insight; include insight in the hashed context to avoid collisions.
+  const contextForKey: JsonObject = { ...builtContext, __insight: body.insight };
   const { key: cacheKey } = buildReasoningCacheKey({
     type: 'insight-critic',
     referenceId: body.referenceId,
     version,
-    context: builtContext,
+    context: contextForKey,
   });
 
   const kvKey = kvKeys.reasoningCache('insight-critic', body.referenceId, version, cacheKey);

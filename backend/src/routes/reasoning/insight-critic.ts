@@ -10,7 +10,7 @@ import { runInsightCritic } from './engine.js';
 
 const insightCriticRequestSchema = z.object({
   referenceId: z.string().min(1),
-  version: z.string().min(1).optional().default(REASONING_CONTRACT_VERSION),
+  version: z.string().min(1).default(REASONING_CONTRACT_VERSION),
   context: jsonObjectSchema,
   insight: jsonObjectSchema,
 });
