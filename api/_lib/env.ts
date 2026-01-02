@@ -23,9 +23,14 @@ export interface BackendEnv {
   DEEPSEEK_BASE_URL?: string;
   DEEPSEEK_MODEL_REASONING?: string;
 
+  // Grok Pulse
+  GROK_API_KEY?: string;
+  GROK_BASE_URL?: string;
+  GROK_MODEL_PULSE?: string;
+  GROK_PULSE_REFRESH_SECRET?: string;
+
   OPUS_MODEL?: string;
   // Optional upstream backend (e.g. Railway) for reasoning routes
-  REASONING_BACKEND_URL?: string;
 }
 
 let cachedEnv: BackendEnv | null = null;
@@ -34,10 +39,11 @@ export function getEnv(): BackendEnv {
   if (cachedEnv) return cachedEnv;
 
   cachedEnv = {
-    NODE_ENV: (process.env.NODE_ENV as BackendEnv['NODE_ENV']) || 'development',
+    NODE_ENV: (process.env.NODE_ENV as 'development' | 'test' | 'production') || 'development',
     KV_REST_API_URL: process.env.KV_REST_API_URL,
     KV_REST_API_TOKEN: process.env.KV_REST_API_TOKEN,
     KV_REST_API_READ_ONLY_TOKEN: process.env.KV_REST_API_READ_ONLY_TOKEN,
+    
     DEXPAPRIKA_API_KEY: process.env.DEXPAPRIKA_API_KEY,
     MORALIS_API_KEY: process.env.MORALIS_API_KEY,
     
@@ -51,35 +57,27 @@ export function getEnv(): BackendEnv {
     DEEPSEEK_BASE_URL: process.env.DEEPSEEK_BASE_URL,
     DEEPSEEK_MODEL_REASONING: process.env.DEEPSEEK_MODEL_REASONING,
 
+    GROK_API_KEY: process.env.GROK_API_KEY,
+    GROK_BASE_URL: process.env.GROK_BASE_URL,
+    GROK_MODEL_PULSE: process.env.GROK_MODEL_PULSE,
+    GROK_PULSE_REFRESH_SECRET: process.env.GROK_PULSE_REFRESH_SECRET,
+
     OPUS_MODEL: process.env.OPUS_MODEL,
-    REASONING_BACKEND_URL: process.env.REASONING_BACKEND_URL,
   };
 
   return cachedEnv;
 }
 
-export function resetEnvCache(): void {
-  cachedEnv = null;
-}
-
-export function hasVercelKV(): boolean {
-  const env = getEnv();
-  return Boolean(env.KV_REST_API_URL && env.KV_REST_API_TOKEN);
-}
-
-export function hasProviderKeys(): boolean {
-  const env = getEnv();
-  return Boolean(env.DEXPAPRIKA_API_KEY || env.MORALIS_API_KEY);
-}
-
-export function isProd(): boolean {
-  return getEnv().NODE_ENV === 'production';
-}
-
-export function isDev(): boolean {
+// Helpers
+export function isDev() {
   return getEnv().NODE_ENV === 'development';
 }
 
-export function isTest(): boolean {
+export function isTest() {
   return getEnv().NODE_ENV === 'test';
+}
+
+export function hasVercelKV() {
+  const env = getEnv();
+  return !!(env.KV_REST_API_URL && env.KV_REST_API_TOKEN);
 }
