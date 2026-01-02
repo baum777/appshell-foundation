@@ -14,6 +14,15 @@ export interface BackendEnv {
   MORALIS_API_KEY?: string;
   // AI (optional)
   OPENAI_API_KEY?: string;
+  OPENAI_BASE_URL?: string;
+  OPENAI_MODEL_JOURNAL?: string;
+  OPENAI_MODEL_INSIGHTS?: string;
+  OPENAI_MODEL_CHARTS?: string;
+  
+  DEEPSEEK_API_KEY?: string;
+  DEEPSEEK_BASE_URL?: string;
+  DEEPSEEK_MODEL_REASONING?: string;
+
   OPUS_MODEL?: string;
   // Optional upstream backend (e.g. Railway) for reasoning routes
   REASONING_BACKEND_URL?: string;
@@ -31,12 +40,26 @@ export function getEnv(): BackendEnv {
     KV_REST_API_READ_ONLY_TOKEN: process.env.KV_REST_API_READ_ONLY_TOKEN,
     DEXPAPRIKA_API_KEY: process.env.DEXPAPRIKA_API_KEY,
     MORALIS_API_KEY: process.env.MORALIS_API_KEY,
+    
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+    OPENAI_BASE_URL: process.env.OPENAI_BASE_URL,
+    OPENAI_MODEL_JOURNAL: process.env.OPENAI_MODEL_JOURNAL,
+    OPENAI_MODEL_INSIGHTS: process.env.OPENAI_MODEL_INSIGHTS,
+    OPENAI_MODEL_CHARTS: process.env.OPENAI_MODEL_CHARTS,
+    
+    DEEPSEEK_API_KEY: process.env.DEEPSEEK_API_KEY,
+    DEEPSEEK_BASE_URL: process.env.DEEPSEEK_BASE_URL,
+    DEEPSEEK_MODEL_REASONING: process.env.DEEPSEEK_MODEL_REASONING,
+
     OPUS_MODEL: process.env.OPUS_MODEL,
     REASONING_BACKEND_URL: process.env.REASONING_BACKEND_URL,
   };
 
   return cachedEnv;
+}
+
+export function resetEnvCache(): void {
+  cachedEnv = null;
 }
 
 export function hasVercelKV(): boolean {

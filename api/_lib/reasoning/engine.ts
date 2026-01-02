@@ -17,7 +17,7 @@ import type {
 import { REASONING_CONTRACT_VERSION } from './types';
 import { buildReasoningCacheKey } from './cacheKey';
 import { withRetry } from './retry';
-import { callOpenAiJson } from './openaiClient';
+import { routeLLMRequest } from './llmRouter';
 import {
   boardScenariosInsightSchema,
   insightCriticOnlyResultSchema,
@@ -190,8 +190,22 @@ async function runCritic(input: {
   const env = getEnv();
   const schemaJson = criticOutputSchemaJson();
 
-  if (env.OPENAI_API_KEY) {
-    const prompt = buildCriticPrompt({
+  // If DeepSeek keys are missing, the router throws MISSING_DEEPSEEK_KEY.
+  // We can catch that and fallback to deterministic if we want, OR we can let it fail as per requirements.
+  // "if DeepSeek keys missing: return a normalized recoverable error"
+  // But wait, "reasoning cannot fall back to OpenAI".
+  // The user requirement says: "if DeepSeek keys missing: return a normalized recoverable error".
+  // It does NOT say fallback to deterministic. However, deterministic is a valid stub.
+  // Let's try to use the router. If it fails due to missing keys, we might fallback to deterministic if appropriate,
+  // or return error. The router is enforcing DeepSeek.
+  
+  // The previous code had `if (env.OPENAI_API_KEY)`. Now we check if we can run LLM via router.
+  // The router handles the check. If it throws, we catch it in the main flow.
+  // But here we need to know if we should even TRY calling the LLM.
+  // We can just try calling it.
+  
+  try {
+     const prompt = buildCriticPrompt({
       referenceId: input.referenceId,
       version: input.version,
       context: input.context,
@@ -199,19 +213,40 @@ async function runCritic(input: {
       outputSchemaJson: schemaJson,
     });
 
-    const result = await callOpenAiJson(prompt, { model: input.model, timeoutMs: input.timeoutMs });
+    const result = await routeLLMRequest('reasoning_critic', {
+      prompt,
+      model: input.model,
+      timeoutMs: input.timeoutMs,
+      jsonOnly: true,
+      system: 'You are a critical insight reviewer. Return strictly valid JSON.',
+    });
+    
     const report = insightCriticReportSchema.parse(result.parsed);
     return { report, modelUsed: result.model };
-  }
 
-  const fallback = deterministicCritic({
-    referenceId: input.referenceId,
-    version: input.version,
-    context: input.context,
-    insight: input.insight,
-  });
-  const report = insightCriticReportSchema.parse(fallback.report);
-  return { report, modelUsed: 'stub-deterministic' };
+  } catch (e: any) {
+    // If keys missing or other error, fallback to deterministic stub?
+    // Requirement: "if DeepSeek keys missing: return a normalized recoverable error"
+    // It implies returning an error response to the client, NOT falling back to deterministic silently,
+    // unless "recoverable error" means "it's okay, here is a stub".
+    // "do NOT fallback to OpenAI"
+    
+    // Actually, looking at the previous code: `if (env.OPENAI_API_KEY) { ... } else { fallback }`.
+    // So if keys are missing, we used to fallback to deterministic.
+    // I will preserve this behavior but check for DEEPSEEK_API_KEY implicitly via the catch.
+    // If the error is specifically MISSING_DEEPSEEK_KEY, maybe we can fallback to deterministic
+    // IF we want to allow running without keys (dev mode).
+    // BUT the requirement says: "reasoning endpoints must be locked to DeepSeek"
+    // "if DeepSeek keys missing: return a normalized recoverable error"
+    // This sounds like an API error response.
+    
+    if (e.message === 'MISSING_DEEPSEEK_KEY') {
+       throw e; // Let the top level handler convert this to a specific error code
+    }
+    
+    // If it's another error (timeout, etc), we might want to let it bubble up too.
+    throw e;
+  }
 }
 
 export async function runReasoning(
@@ -222,7 +257,7 @@ export async function runReasoning(
   const started = Date.now();
   const env = getEnv();
   const version = body.version || REASONING_CONTRACT_VERSION;
-  const model = env.OPUS_MODEL || 'gpt-4o-mini';
+  const model = env.DEEPSEEK_MODEL_REASONING || env.OPUS_MODEL || 'deepseek-reasoner';
 
   const { key: cacheKey } = buildReasoningCacheKey({
     type,
@@ -250,7 +285,7 @@ export async function runReasoning(
     };
   }
 
-  const timeoutMs = 12000;
+  const timeoutMs = 25000; // Increased for reasoning models
 
   try {
     const insight = await withRetry(
@@ -288,40 +323,50 @@ export async function runReasoning(
           }
         }
 
-        // Direct LLM call (or deterministic fallback)
-        if (env.OPENAI_API_KEY) {
-          const outputSchemaJson =
-            type === 'trade-review'
-              ? tradeReviewOutputSchemaJson()
-              : type === 'session-review'
-                ? sessionReviewOutputSchemaJson()
-                : boardScenariosOutputSchemaJson();
+        // Direct LLM call
+        // We catch MISSING_DEEPSEEK_KEY here if we want to fallback to deterministic, 
+        // OR we let it bubble up to return an error.
+        // Given the requirement "if DeepSeek keys missing: return a normalized recoverable error",
+        // I will let it bubble up so the client gets an explicit error.
+        
+        // HOWEVER, for dev environment without keys, maybe we still want deterministic stub?
+        // The prompt says "if DeepSeek keys missing: return a normalized recoverable error".
+        // This implies no fallback to deterministic? 
+        // "Compatibility rule: If existing code uses OPUS_MODEL, keep it for backward compatibility but prefer DEEPSEEK_MODEL_REASONING".
+        // Existing code fell back to deterministic if no keys.
+        // I will implement a check: if NO keys are present (dev), maybe use deterministic?
+        // But the router throws error.
+        // I will stick to the requirement: return error.
+        
+        const outputSchemaJson =
+          type === 'trade-review'
+            ? tradeReviewOutputSchemaJson()
+            : type === 'session-review'
+              ? sessionReviewOutputSchemaJson()
+              : boardScenariosOutputSchemaJson();
 
-          const prompt = buildGeneratorPrompt({
-            type,
-            referenceId: body.referenceId,
-            version,
-            context: body.context,
-            outputSchemaJson,
-          });
-
-          const result = await callOpenAiJson(prompt, { model, timeoutMs });
-          const parsed = result.parsed;
-
-          if (type === 'trade-review') return tradeReviewInsightSchema.parse(parsed);
-          if (type === 'session-review') return sessionReviewInsightSchema.parse(parsed);
-          return boardScenariosInsightSchema.parse(parsed);
-        }
-
-        const fallback = deterministicGenerate(type, {
+        const prompt = buildGeneratorPrompt({
+          type,
           referenceId: body.referenceId,
           version,
           context: body.context,
+          outputSchemaJson,
         });
 
-        if (type === 'trade-review') return tradeReviewInsightSchema.parse(fallback);
-        if (type === 'session-review') return sessionReviewInsightSchema.parse(fallback);
-        return boardScenariosInsightSchema.parse(fallback);
+        // Use router
+        const result = await routeLLMRequest('reasoning', {
+            prompt,
+            model,
+            timeoutMs,
+            jsonOnly: true,
+            system: 'You are a deep reasoning engine. Output valid JSON only.',
+        });
+        
+        const parsed = result.parsed;
+
+        if (type === 'trade-review') return tradeReviewInsightSchema.parse(parsed);
+        if (type === 'session-review') return sessionReviewInsightSchema.parse(parsed);
+        return boardScenariosInsightSchema.parse(parsed);
       },
       { maxAttempts: 3, baseDelayMs: 250, maxDelayMs: 2000 },
       isRetryableUpstream
@@ -333,7 +378,7 @@ export async function runReasoning(
       version,
       context: body.context,
       insight: insight as unknown as JsonObject,
-      timeoutMs: 8000,
+      timeoutMs: 15000,
       model,
     });
 
@@ -344,12 +389,12 @@ export async function runReasoning(
 
     const latencyMs = Date.now() - started;
     const response = ok(ctx, finalInsight, {
-      model: env.OPENAI_API_KEY ? model : 'stub-deterministic',
+      model: critic.modelUsed, // Use the model from the critic or the main call (approx)
       latencyMs,
       version,
       confidence: critic.report.adjustedConfidence,
       warnings: critic.report.issues.length ? critic.report.notes : [],
-      cache: { key: cacheKey, hit: false, isStale: false, source: env.REASONING_BACKEND_URL ? 'backend' : env.OPENAI_API_KEY ? 'llm' : 'llm' },
+      cache: { key: cacheKey, hit: false, isStale: false, source: env.REASONING_BACKEND_URL ? 'backend' : 'llm' },
     });
 
     await maybeSetCached(kvKey, response, kvTTL.reasoningCache);
@@ -363,7 +408,7 @@ export async function runReasoning(
       message: mapped.message,
       retryable: mapped.retryable,
       latencyMs,
-      model: env.OPENAI_API_KEY ? model : 'stub-deterministic',
+      model: env.DEEPSEEK_MODEL_REASONING || 'unknown',
       version,
     });
   }
@@ -376,7 +421,7 @@ export async function runInsightCritic(
   const started = Date.now();
   const env = getEnv();
   const version = body.version || REASONING_CONTRACT_VERSION;
-  const model = env.OPUS_MODEL || 'gpt-4o-mini';
+  const model = env.DEEPSEEK_MODEL_REASONING || env.OPUS_MODEL || 'deepseek-reasoner';
 
   // Critic depends on both context + insight; include insight in the hashed context to avoid collisions.
   const contextForKey: JsonObject = { ...body.context, __insight: body.insight };
@@ -407,7 +452,7 @@ export async function runInsightCritic(
       version,
       context: body.context,
       insight: body.insight,
-      timeoutMs: 8000,
+      timeoutMs: 15000,
       model,
     });
 
@@ -419,12 +464,12 @@ export async function runInsightCritic(
 
     const latencyMs = Date.now() - started;
     const response = ok(ctx, payload, {
-      model: env.OPENAI_API_KEY ? model : 'stub-deterministic',
+      model: report.modelUsed,
       latencyMs,
       version,
       confidence: report.report.adjustedConfidence,
       warnings: report.report.issues.length ? report.report.notes : [],
-      cache: { key: cacheKey, hit: false, isStale: false, source: env.OPENAI_API_KEY ? 'llm' : 'llm' },
+      cache: { key: cacheKey, hit: false, isStale: false, source: 'llm' },
     });
 
     await maybeSetCached(kvKey, response, kvTTL.reasoningCache);
@@ -438,7 +483,7 @@ export async function runInsightCritic(
       message: mapped.message,
       retryable: mapped.retryable,
       latencyMs,
-      model: env.OPENAI_API_KEY ? model : 'stub-deterministic',
+      model: env.DEEPSEEK_MODEL_REASONING || 'unknown',
       version,
     });
   }
@@ -448,6 +493,9 @@ function mapEngineError(error: unknown): { code: ReasoningErrorCode; message: st
   const status = (error as any)?.status;
   const msg = error instanceof Error ? error.message : String(error);
 
+  if (msg.includes('MISSING_DEEPSEEK_KEY')) {
+    return { code: 'INTERNAL_ERROR', message: 'DeepSeek configuration missing', retryable: false };
+  }
   if (error instanceof Error && error.name === 'AbortError') {
     return { code: 'TIMEOUT', message: 'Reasoning request timed out', retryable: true };
   }
@@ -468,5 +516,3 @@ function reqAuthHeader(ctx: HandlerContext): string {
   if (Array.isArray(header)) return header[0] || '';
   return header || '';
 }
-
-

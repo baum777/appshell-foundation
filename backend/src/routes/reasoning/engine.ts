@@ -3,7 +3,6 @@ import { getRequestId } from '../../http/requestId.js';
 import { kvGet, kvSet, kvKeys, kvTTL } from '../../db/kv.js';
 import { getEnv } from '../../config/env.js';
 import { buildReasoningContext } from '../../context/contextBuilder.js';
-import { opusCallJson } from '../../clients/opusClient.js';
 import type {
   BoardScenariosInsight,
   InsightCriticOnlyResult,
@@ -20,6 +19,7 @@ import type {
 import { REASONING_CONTRACT_VERSION } from './types.js';
 import { buildReasoningCacheKey } from './cacheKey.js';
 import { withRetry } from './retry.js';
+import { routeLLMRequest } from '../../clients/llmRouter.js';
 import {
   boardScenariosInsightSchema,
   insightCriticOnlyResultSchema,
@@ -176,11 +176,11 @@ async function runCritic(input: {
   insight: JsonObject;
   timeoutMs: number;
   model: string;
-}): Promise<InsightCriticReport> {
+}): Promise<{ report: InsightCriticReport; modelUsed: string }> {
   const env = getEnv();
   const schemaJson = criticOutputSchemaJson();
 
-  if (env.OPENAI_API_KEY) {
+  try {
     const prompt = buildCriticPrompt({
       referenceId: input.referenceId,
       version: input.version,
@@ -189,17 +189,22 @@ async function runCritic(input: {
       outputSchemaJson: schemaJson,
     });
 
-    const result = await opusCallJson(prompt, { model: input.model, timeoutMs: input.timeoutMs });
-    return insightCriticReportSchema.parse(result.parsed);
-  }
+    const result = await routeLLMRequest('reasoning_critic', {
+      prompt,
+      model: input.model,
+      timeoutMs: input.timeoutMs,
+      jsonOnly: true,
+      system: 'You are a critical insight reviewer. Return strictly valid JSON.',
+    });
 
-  const fallback = deterministicCritic({
-    referenceId: input.referenceId,
-    version: input.version,
-    context: input.context,
-    insight: input.insight,
-  });
-  return insightCriticReportSchema.parse(fallback.report);
+    const report = insightCriticReportSchema.parse(result.parsed);
+    return { report, modelUsed: result.model };
+  } catch (e: any) {
+    if (e.message === 'MISSING_DEEPSEEK_KEY') {
+       throw e; 
+    }
+    throw e;
+  }
 }
 
 export async function runReasoning(
@@ -210,7 +215,7 @@ export async function runReasoning(
   const started = Date.now();
   const env = getEnv();
   const version = body.version || REASONING_CONTRACT_VERSION;
-  const model = env.OPUS_MODEL || 'gpt-4o-mini';
+  const model = env.DEEPSEEK_MODEL_REASONING || env.OPUS_MODEL || 'deepseek-reasoner';
 
   const builtContext = buildReasoningContext({
     userId: req.userId,
@@ -239,42 +244,39 @@ export async function runReasoning(
     };
   }
 
+  const timeoutMs = 25000;
+
   try {
     const insight = await withRetry(
       async () => {
-        if (env.OPENAI_API_KEY) {
-          const outputSchemaJson =
-            type === 'trade-review'
-              ? tradeReviewOutputSchemaJson()
-              : type === 'session-review'
-                ? sessionReviewOutputSchemaJson()
-                : boardScenariosOutputSchemaJson();
+        const outputSchemaJson =
+          type === 'trade-review'
+            ? tradeReviewOutputSchemaJson()
+            : type === 'session-review'
+              ? sessionReviewOutputSchemaJson()
+              : boardScenariosOutputSchemaJson();
 
-          const prompt = buildGeneratorPrompt({
-            type,
-            referenceId: body.referenceId,
-            version,
-            context: builtContext,
-            outputSchemaJson,
-          });
-
-          const result = await opusCallJson(prompt, { model, timeoutMs: 12000 });
-          const parsed = result.parsed;
-
-          if (type === 'trade-review') return tradeReviewInsightSchema.parse(parsed);
-          if (type === 'session-review') return sessionReviewInsightSchema.parse(parsed);
-          return boardScenariosInsightSchema.parse(parsed);
-        }
-
-        const fallback = deterministicGenerate(type, {
+        const prompt = buildGeneratorPrompt({
+          type,
           referenceId: body.referenceId,
           version,
           context: builtContext,
+          outputSchemaJson,
         });
 
-        if (type === 'trade-review') return tradeReviewInsightSchema.parse(fallback);
-        if (type === 'session-review') return sessionReviewInsightSchema.parse(fallback);
-        return boardScenariosInsightSchema.parse(fallback);
+        const result = await routeLLMRequest('reasoning', {
+            prompt,
+            model,
+            timeoutMs,
+            jsonOnly: true,
+            system: 'You are a deep reasoning engine. Output valid JSON only.',
+        });
+        
+        const parsed = result.parsed;
+
+        if (type === 'trade-review') return tradeReviewInsightSchema.parse(parsed);
+        if (type === 'session-review') return sessionReviewInsightSchema.parse(parsed);
+        return boardScenariosInsightSchema.parse(parsed);
       },
       { maxAttempts: 3, baseDelayMs: 250, maxDelayMs: 2000 },
       isRetryableUpstream
@@ -285,23 +287,23 @@ export async function runReasoning(
       version,
       context: builtContext,
       insight: insight as unknown as JsonObject,
-      timeoutMs: 8000,
+      timeoutMs: 15000,
       model,
     });
 
     const finalInsight = {
       ...insight,
-      critic,
+      critic: critic.report,
     } as AnyInsight;
 
     const latencyMs = Date.now() - started;
     const response = ok(finalInsight, {
-      model: env.OPENAI_API_KEY ? model : 'stub-deterministic',
+      model: critic.modelUsed,
       latencyMs,
       version,
-      confidence: critic.adjustedConfidence,
-      warnings: critic.issues.length ? critic.notes : [],
-      cache: { key: cacheKey, hit: false, isStale: false, source: env.OPENAI_API_KEY ? 'llm' : 'llm' },
+      confidence: critic.report.adjustedConfidence,
+      warnings: critic.report.issues.length ? critic.report.notes : [],
+      cache: { key: cacheKey, hit: false, isStale: false, source: 'llm' },
     });
 
     kvSet(kvKey, response, kvTTL.reasoningCache);
@@ -315,7 +317,7 @@ export async function runReasoning(
       message: mapped.message,
       retryable: mapped.retryable,
       latencyMs,
-      model: env.OPENAI_API_KEY ? model : 'stub-deterministic',
+      model: env.DEEPSEEK_MODEL_REASONING || 'unknown',
       version,
     });
   }
@@ -328,7 +330,7 @@ export async function runInsightCritic(
   const started = Date.now();
   const env = getEnv();
   const version = body.version || REASONING_CONTRACT_VERSION;
-  const model = env.OPUS_MODEL || 'gpt-4o-mini';
+  const model = env.DEEPSEEK_MODEL_REASONING || env.OPUS_MODEL || 'deepseek-reasoner';
 
   const builtContext = buildReasoningContext({
     userId: req.userId,
@@ -337,7 +339,6 @@ export async function runInsightCritic(
     context: body.context,
   });
 
-  // Critic depends on both context + insight; include insight in the hashed context to avoid collisions.
   const contextForKey: JsonObject = { ...builtContext, __insight: body.insight };
   const { key: cacheKey } = buildReasoningCacheKey({
     type: 'insight-critic',
@@ -365,24 +366,24 @@ export async function runInsightCritic(
       version,
       context: builtContext,
       insight: body.insight,
-      timeoutMs: 8000,
+      timeoutMs: 15000,
       model,
     });
 
     const payload = insightCriticOnlyResultSchema.parse({
       type: 'insight-critic',
       referenceId: body.referenceId,
-      report,
+      report: report.report,
     });
 
     const latencyMs = Date.now() - started;
     const response = ok(payload, {
-      model: env.OPENAI_API_KEY ? model : 'stub-deterministic',
+      model: report.modelUsed,
       latencyMs,
       version,
-      confidence: report.adjustedConfidence,
-      warnings: report.issues.length ? report.notes : [],
-      cache: { key: cacheKey, hit: false, isStale: false, source: env.OPENAI_API_KEY ? 'llm' : 'llm' },
+      confidence: report.report.adjustedConfidence,
+      warnings: report.report.issues.length ? report.report.notes : [],
+      cache: { key: cacheKey, hit: false, isStale: false, source: 'llm' },
     });
 
     kvSet(kvKey, response, kvTTL.reasoningCache);
@@ -396,7 +397,7 @@ export async function runInsightCritic(
       message: mapped.message,
       retryable: mapped.retryable,
       latencyMs,
-      model: env.OPENAI_API_KEY ? model : 'stub-deterministic',
+      model: env.DEEPSEEK_MODEL_REASONING || 'unknown',
       version,
     });
   }
@@ -406,6 +407,9 @@ function mapEngineError(error: unknown): { code: ReasoningErrorCode; message: st
   const status = (error as any)?.status;
   const msg = error instanceof Error ? error.message : String(error);
 
+  if (msg.includes('MISSING_DEEPSEEK_KEY')) {
+    return { code: 'INTERNAL_ERROR', message: 'DeepSeek configuration missing', retryable: false };
+  }
   if (error instanceof Error && error.name === 'AbortError') {
     return { code: 'TIMEOUT', message: 'Reasoning request timed out', retryable: true };
   }
@@ -420,5 +424,3 @@ function mapEngineError(error: unknown): { code: ReasoningErrorCode; message: st
   }
   return { code: 'INTERNAL_ERROR', message: 'Internal reasoning error', retryable: false };
 }
-
-
