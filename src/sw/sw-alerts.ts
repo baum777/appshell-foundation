@@ -17,7 +17,7 @@ import { shouldPoll, recordPollSuccess, recordPollFailure, handleRateLimit } fro
 declare const self: ServiceWorkerGlobalScope & typeof globalThis;
 
 const ALERTS_LAST_SINCE_KEY = 'alerts:lastSince';
-const API_BASE = '/api';
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 /**
  * Get notification title for alert event

@@ -66,10 +66,19 @@ export function OfflineProvider({ children }: OfflineProviderProps) {
   const [lastSyncedAt, setLastSyncedAt] = React.useState<number | null>(null);
   const prevOnlineRef = React.useRef(isOnline);
 
+import { syncService } from '@/services/sync/sync.service';
+
+// ... (existing imports)
+
+export function OfflineProvider({ children }: OfflineProviderProps) {
+  // ... (existing state)
+
   // Online/offline event listeners
   React.useEffect(() => {
     function handleOnline() {
       setIsOnline(true);
+      // Trigger sync when back online
+      syncService.processQueue();
     }
     function handleOffline() {
       setIsOnline(false);
@@ -78,11 +87,19 @@ export function OfflineProvider({ children }: OfflineProviderProps) {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
+    // Initial check
+    if (navigator.onLine) {
+       syncService.processQueue();
+    }
+
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
+
+  // ... (rest of component)
+}
 
   // Toast notifications on connectivity change
   React.useEffect(() => {
