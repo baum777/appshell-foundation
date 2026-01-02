@@ -188,11 +188,10 @@ class JournalService {
 
     return apiClient.post<string[]>(
       `${this.basePath}/${id}/screenshots`,
-      formData as any,
+      formData as unknown,
       {
-        headers: {
-          // Content-Type wird automatisch von FormData gesetzt
-        } as any,
+        // Content-Type wird automatisch von FormData gesetzt
+        headers: {},
       }
     );
   }

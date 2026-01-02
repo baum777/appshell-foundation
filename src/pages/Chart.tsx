@@ -1,18 +1,18 @@
-import { useState, useCallback } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useState, useCallback, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { useChartStub, useOracleStub, useJournalStub } from "@/stubs/hooks";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, RefreshCw, BarChart3 } from "lucide-react";
+import { isValidChartQuery, normalizeChartQuery } from "@/routes/routes";
 import {
   ChartTopBar,
   ChartToolbar,
   ChartCanvas,
   ToolsIndicatorsPanel,
   ToolsIndicatorsSheet,
-  ReplayControls,
   ChartSkeleton,
 } from "@/components/chart";
 import { MarketsBanner } from "@/components/chart/MarketsBanner";
@@ -20,7 +20,8 @@ import { BottomCardsCarousel } from "@/components/chart/BottomCardsCarousel";
 import { AITAAnalyzerDialog } from "@/components/chart/AITAAnalyzerDialog";
 
 export default function Chart() {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const isMobile = useIsMobile();
   const {
     pageState,
@@ -35,8 +36,27 @@ export default function Chart() {
   const { insights: oracleInsights } = useOracleStub();
   const { entries: journalEntries } = useJournalStub();
 
-  // Replay mode from query param
-  const isReplayMode = searchParams.get("replay") === "true";
+  // Chart query param (frozen): /chart?q=<query>
+  const [queryError, setQueryError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const q = searchParams.get("q");
+    if (!q) {
+      setQueryError(null);
+      return;
+    }
+
+    if (!isValidChartQuery(q)) {
+      setQueryError(
+        'Ungültiger "q" Parameter: erlaubt sind Ticker (1–15, A-Z/0-9/._-) oder Solana Base58 (32–44).'
+      );
+      return;
+    }
+
+    setQueryError(null);
+    setSelectedSymbol(normalizeChartQuery(q));
+    // BACKEND_TODO: trigger fetch for selected market
+  }, [searchParams, setSelectedSymbol]);
 
   // UI state
   const [toolsSheetOpen, setToolsSheetOpen] = useState(false);
@@ -45,21 +65,13 @@ export default function Chart() {
   const [crosshairEnabled, setCrosshairEnabled] = useState(true);
   const [enabledIndicators, setEnabledIndicators] = useState<string[]>(["sma"]);
 
-  // Track if any overlay is open for keyboard shortcut guard
-  const isOverlayOpen = toolsSheetOpen || aiAnalyzerOpen;
-
-  // Toggle replay mode via query param
+  // Toggle replay mode via dedicated route (frozen): /replay
   const handleReplayToggle = useCallback(
     (enabled: boolean) => {
-      if (enabled) {
-        searchParams.set("replay", "true");
-      } else {
-        searchParams.delete("replay");
-      }
-      setSearchParams(searchParams, { replace: true });
-      // BACKEND_TODO: persist replay preference if needed
+      if (!enabled) return;
+      navigate("/replay", selectedSymbol ? { state: { q: selectedSymbol } } : undefined);
     },
-    [searchParams, setSearchParams]
+    [navigate, selectedSymbol]
   );
 
   const handleToggleIndicator = useCallback((id: string) => {
@@ -129,12 +141,18 @@ export default function Chart() {
       <h1 className="sr-only">Chart</h1>
 
       <div className="space-y-4">
+        {queryError && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{queryError}</AlertDescription>
+          </Alert>
+        )}
         {/* Top Bar */}
         <ChartTopBar
           symbol={selectedSymbol}
           timeframe={selectedTimeframe}
           onTimeframeChange={setSelectedTimeframe}
-          isReplayMode={isReplayMode}
+          isReplayMode={false}
           onReplayToggle={handleReplayToggle}
           onMobileToolsOpen={() => setToolsSheetOpen(true)}
           isMobile={isMobile}
@@ -157,9 +175,6 @@ export default function Chart() {
               crosshairEnabled={crosshairEnabled}
               onCrosshairToggle={setCrosshairEnabled}
             />
-
-            {/* Replay controls (only in replay mode) */}
-            {isReplayMode && <ReplayControls isOverlayOpen={isOverlayOpen} />}
 
             {/* Chart Canvas with empty overlay */}
             {hasChartData ? (
@@ -222,7 +237,7 @@ export default function Chart() {
         onOpenChange={setAiAnalyzerOpen}
         selectedMarket={selectedSymbol}
         selectedTimeframe={selectedTimeframe}
-        isReplayMode={isReplayMode}
+        isReplayMode={false}
       />
     </PageContainer>
   );

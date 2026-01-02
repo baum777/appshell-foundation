@@ -2,6 +2,8 @@
  * Test Fixtures und Mock-Daten für Playwright Tests
  */
 
+import type { Page } from '@playwright/test';
+
 export const mockUser = {
   id: 'test-user-1',
   email: 'test@example.com',
@@ -239,21 +241,21 @@ export const mockAlerts = [
 /**
  * Helper function to wait for network idle
  */
-export async function waitForNetworkIdle(page: any, timeout = 2000) {
+export async function waitForNetworkIdle(page: Page, timeout = 2000) {
   await page.waitForLoadState('networkidle', { timeout });
 }
 
 /**
  * Helper function to wait for element with timeout
  */
-export async function waitForElement(page: any, selector: string, timeout = 5000) {
+export async function waitForElement(page: Page, selector: string, timeout = 5000) {
   await page.waitForSelector(selector, { timeout, state: 'visible' });
 }
 
 /**
  * Helper function to take screenshot with timestamp
  */
-export async function takeTimestampedScreenshot(page: any, name: string) {
+export async function takeTimestampedScreenshot(page: Page, name: string) {
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   await page.screenshot({ path: `screenshots/${name}-${timestamp}.png` });
 }

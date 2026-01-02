@@ -177,7 +177,7 @@ export default function Watchlist() {
   const handleOpenChart = useCallback(() => {
     const symbol = selectedSymbol || notFoundSymbol;
     if (symbol) {
-      navigate(`/chart?query=${encodeURIComponent(symbol)}`);
+      navigate(`/chart?q=${encodeURIComponent(symbol)}`);
     } else {
       navigate("/chart");
     }
@@ -185,11 +185,7 @@ export default function Watchlist() {
 
   const handleOpenReplay = useCallback(() => {
     const symbol = selectedSymbol || notFoundSymbol;
-    if (symbol) {
-      navigate(`/chart?replay=true&query=${encodeURIComponent(symbol)}`);
-    } else {
-      navigate("/chart?replay=true");
-    }
+    navigate("/replay", symbol ? { state: { q: symbol } } : undefined);
   }, [navigate, selectedSymbol, notFoundSymbol]);
 
   const handleAddClick = useCallback(() => {

@@ -31,7 +31,7 @@ export default function LessonViewer() {
       <PageContainer testId="page-lesson-viewer">
         <div className="space-y-6">
           <h1 className="sr-only">Lesson not found</h1>
-          <Button variant="ghost" size="sm" onClick={() => navigate("/lessons")}>
+          <Button variant="ghost" size="sm" onClick={() => navigate("/learn")}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to lessons
           </Button>
@@ -45,7 +45,7 @@ export default function LessonViewer() {
                 The lesson you're looking for doesn't exist or has been removed.
               </p>
               <Button asChild>
-                <Link to="/lessons">Browse lessons</Link>
+                <Link to="/learn">Browse lessons</Link>
               </Button>
             </CardContent>
           </Card>
@@ -73,7 +73,7 @@ export default function LessonViewer() {
     <PageContainer testId="page-lesson-viewer">
       <div className="space-y-6">
         {/* Back button */}
-        <Button variant="ghost" size="sm" onClick={() => navigate("/lessons")}>
+        <Button variant="ghost" size="sm" onClick={() => navigate("/learn")}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to lessons
         </Button>

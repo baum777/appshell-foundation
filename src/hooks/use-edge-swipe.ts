@@ -14,7 +14,7 @@ import { useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 // Routes where edge-swipe is disabled (canvas-intensive screens)
-const GATED_ROUTES = ['/chart', '/replay', '/chart/replay'];
+const GATED_ROUTES = ['/chart', '/replay'];
 
 // Routes where edge-swipe is explicitly allowed (optional allowlist)
 const ALLOWED_ROUTES = [
@@ -24,8 +24,8 @@ const ALLOWED_ROUTES = [
   '/alerts',
   '/oracle',
   '/journal',
-  '/lessons',
   '/learn',
+  '/handbook',
   '/settings',
 ];
 

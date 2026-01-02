@@ -39,13 +39,13 @@ test.describe('Journal Page', () => {
 test.describe('Journal Navigation', () => {
   test('sollte von Dashboard zu Journal navigieren können', async ({ page }) => {
     await page.goto('/');
-    await page.click('[data-testid="nav-journal"]');
+    await page.click('[data-testid="tab-journal"]');
     await expect(page).toHaveURL('/journal');
   });
 
   test('sollte aktiven Nav-Status zeigen', async ({ page }) => {
     await page.goto('/journal');
-    const journalLink = page.locator('[data-testid="nav-journal"]');
+    const journalLink = page.locator('aside').locator('[data-testid="tab-journal"]');
     await expect(journalLink).toHaveClass(/nav-item-active/);
   });
 });

@@ -4,6 +4,12 @@ import "./index.css";
 
 // Service Worker Registration
 async function registerServiceWorker(): Promise<void> {
+  // In dev/test the file `/sw.js` may not be served with a valid JS MIME type.
+  // Register only for production builds.
+  if (!import.meta.env.PROD) {
+    return;
+  }
+
   if (!('serviceWorker' in navigator)) {
     console.log('[App] Service Worker not supported');
     return;
