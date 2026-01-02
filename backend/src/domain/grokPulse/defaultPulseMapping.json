@@ -1,0 +1,208 @@
+{
+  "version": "v1",
+  "scoreBands": [
+    {
+      "id": "BAND_MOON",
+      "min": 80,
+      "max": 100,
+      "label": "MOON",
+      "sentiment_term": "moon potential",
+      "default_cta": "APE",
+      "cta_phrase": "ape in"
+    },
+    {
+      "id": "BAND_STRONG_BULL_70",
+      "min": 70,
+      "max": 79,
+      "label": "STRONG_BULL",
+      "sentiment_term": "strong bull momentum",
+      "default_cta": "APE",
+      "cta_phrase": "raid live"
+    },
+    {
+      "id": "BAND_STRONG_BULL_60",
+      "min": 60,
+      "max": 69,
+      "label": "STRONG_BULL",
+      "sentiment_term": "conviction high",
+      "default_cta": "DCA",
+      "cta_phrase": "hold strong"
+    },
+    {
+      "id": "BAND_BULL_50",
+      "min": 50,
+      "max": 59,
+      "label": "BULL",
+      "sentiment_term": "bullish vibes",
+      "default_cta": "DCA",
+      "cta_phrase": "buy the dip"
+    },
+    {
+      "id": "BAND_BULL_40",
+      "min": 40,
+      "max": 49,
+      "label": "BULL",
+      "sentiment_term": "hype building",
+      "default_cta": "WATCH",
+      "cta_phrase": "position early"
+    },
+    {
+      "id": "BAND_BULL_30",
+      "min": 30,
+      "max": 39,
+      "label": "BULL",
+      "sentiment_term": "accumulation phase",
+      "default_cta": "DCA",
+      "cta_phrase": "accumulate dips"
+    },
+    {
+      "id": "BAND_NEUTRAL_15",
+      "min": 15,
+      "max": 29,
+      "label": "NEUTRAL",
+      "sentiment_term": "choppy market",
+      "default_cta": "WATCH",
+      "cta_phrase": "watch closely"
+    },
+    {
+      "id": "BAND_NEUTRAL_CORE",
+      "min": -14,
+      "max": 14,
+      "label": "NEUTRAL",
+      "sentiment_term": "neutral stagnation",
+      "default_cta": "WATCH",
+      "cta_phrase": "scout gems"
+    },
+    {
+      "id": "BAND_NEUTRAL_NEG",
+      "min": -24,
+      "max": -15,
+      "label": "NEUTRAL",
+      "sentiment_term": "washed out",
+      "default_cta": "WATCH",
+      "cta_phrase": "fade the hype"
+    },
+    {
+      "id": "BAND_BEAR_25",
+      "min": -39,
+      "max": -25,
+      "label": "BEAR",
+      "sentiment_term": "bearish dumps",
+      "default_cta": "DUMP",
+      "cta_phrase": "sell high"
+    },
+    {
+      "id": "BAND_STRONG_BEAR_40",
+      "min": -54,
+      "max": -40,
+      "label": "STRONG_BEAR",
+      "sentiment_term": "strong bear decline",
+      "default_cta": "DUMP",
+      "cta_phrase": "dump fast"
+    },
+    {
+      "id": "BAND_STRONG_BEAR_55",
+      "min": -64,
+      "max": -55,
+      "label": "STRONG_BEAR",
+      "sentiment_term": "panic sell",
+      "default_cta": "AVOID",
+      "cta_phrase": "jeet out"
+    },
+    {
+      "id": "BAND_RUG_65",
+      "min": -79,
+      "max": -65,
+      "label": "RUG",
+      "sentiment_term": "rug risk",
+      "default_cta": "AVOID",
+      "cta_phrase": "avoid rugs"
+    },
+    {
+      "id": "BAND_DEAD",
+      "min": -100,
+      "max": -80,
+      "label": "DEAD",
+      "sentiment_term": "dead project",
+      "default_cta": "AVOID",
+      "cta_phrase": "avoid rugs"
+    }
+  ],
+  "overrides": {
+    "labelHardRules": [
+      {
+        "when": { "label": "RUG" },
+        "set": { "sentiment_term": "rug risk", "cta_phrase": "avoid rugs", "default_cta": "AVOID" }
+      },
+      {
+        "when": { "label": "DEAD" },
+        "set": { "sentiment_term": "dead project", "cta_phrase": "avoid rugs", "default_cta": "AVOID" }
+      }
+    ],
+    "confidenceRules": [
+      {
+        "when": { "minConfidence": 90, "minScore": 40 },
+        "set": { "sentiment_term": "conviction high" }
+      },
+      {
+        "when": { "low_confidence": true, "maxScore": -40 },
+        "set": { "sentiment_term": "rug risk", "cta_phrase": "avoid rugs", "default_cta": "AVOID" }
+      }
+    ],
+    "deltaRules": [
+      {
+        "when": { "minDelta": 25, "minScore": 30 },
+        "set": { "sentiment_term": "fomo incoming", "cta_phrase": "raid live", "default_cta": "APE" }
+      },
+      {
+        "when": { "maxDelta": -25, "maxScore": -30 },
+        "set": { "sentiment_term": "panic sell", "cta_phrase": "jeet out", "default_cta": "AVOID" }
+      },
+      {
+        "when": { "minScore": 50, "maxDelta": -15 },
+        "set": { "sentiment_term": "fomo incoming", "cta_phrase": "raid live", "default_cta": "APE" }
+      },
+      {
+        "when": { "maxScore": -55, "minDelta": 15 },
+        "set": { "sentiment_term": "washed out", "cta_phrase": "watch closely", "default_cta": "WATCH" }
+      }
+    ]
+  },
+  "lexicon": {
+    "sentiment_terms": [
+      "bullish vibes",
+      "bearish dumps",
+      "neutral stagnation",
+      "moon potential",
+      "rug risk",
+      "dead project",
+      "strong bull momentum",
+      "strong bear decline",
+      "fomo incoming",
+      "panic sell",
+      "accumulation phase",
+      "hype building",
+      "washed out",
+      "conviction high",
+      "choppy market"
+    ],
+    "cta_phrases": [
+      "ape in",
+      "dca now",
+      "watch closely",
+      "dump fast",
+      "avoid rugs",
+      "hold strong",
+      "buy the dip",
+      "sell high",
+      "raid live",
+      "jeet out",
+      "position early",
+      "scout gems",
+      "rotate positions",
+      "accumulate dips",
+      "fade the hype"
+    ]
+  }
+}
+
