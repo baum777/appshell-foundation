@@ -20,6 +20,28 @@ export type JsonObject = { [key: string]: JsonValue };
 // Core envelope
 // ─────────────────────────────────────────────────────────────
 
+export type LLMUseCase =
+  | 'journal'
+  | 'insights'
+  | 'charts'
+  | 'reasoning'
+  | 'reasoning_critic'
+  | 'grok_pulse';
+
+export interface LLMRequest {
+  prompt: string;
+  system?: string;
+  model: string;
+  timeoutMs: number;
+  jsonOnly?: boolean;
+}
+
+export interface LLMResponse {
+  model: string;
+  rawText: string;
+  parsed?: unknown;
+}
+
 export type ReasoningType =
   | 'trade-review'
   | 'session-review'

@@ -13,6 +13,15 @@ const envSchema = z.object({
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
   // AI (optional)
   OPENAI_API_KEY: z.string().optional(),
+  OPENAI_BASE_URL: z.string().default('https://api.openai.com/v1'),
+  OPENAI_MODEL_JOURNAL: z.string().optional(),
+  OPENAI_MODEL_INSIGHTS: z.string().optional(),
+  OPENAI_MODEL_CHARTS: z.string().optional(),
+
+  DEEPSEEK_API_KEY: z.string().optional(),
+  DEEPSEEK_BASE_URL: z.string().default('https://api.deepseek.com'),
+  DEEPSEEK_MODEL_REASONING: z.string().optional(),
+
   OPUS_MODEL: z.string().optional(),
 });
 
