@@ -1,59 +1,75 @@
 import { z } from 'zod';
+import { logger } from '../observability/logger.js';
+import dotenv from 'dotenv';
 
-/**
- * Backend Environment Configuration
- * Validates and provides typed access to environment variables
- */
-
-const envSchema = z.object({
-  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-  BACKEND_PORT: z.coerce.number().int().positive().default(3000),
-  API_BASE_PATH: z.string().default('/api'),
-  DATABASE_URL: z.string().default('sqlite:./.data/tradeapp.sqlite'),
-  LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
-  // AI (optional)
-  OPENAI_API_KEY: z.string().optional(),
-  OPENAI_BASE_URL: z.string().default('https://api.openai.com/v1'),
-  OPENAI_MODEL_JOURNAL: z.string().optional(),
-  OPENAI_MODEL_INSIGHTS: z.string().optional(),
-  OPENAI_MODEL_CHARTS: z.string().optional(),
-
-  DEEPSEEK_API_KEY: z.string().optional(),
-  DEEPSEEK_BASE_URL: z.string().default('https://api.deepseek.com'),
-  DEEPSEEK_MODEL_REASONING: z.string().optional(),
-
-  OPUS_MODEL: z.string().optional(),
-});
-
-export type BackendEnv = z.infer<typeof envSchema>;
-
-let cachedEnv: BackendEnv | null = null;
-
-export function loadEnv(): BackendEnv {
-  if (cachedEnv) {
-    return cachedEnv;
+// Load environment variables
+export function loadEnv() {
+  const result = dotenv.config();
+  if (result.error) {
+    logger.warn('Failed to load .env file', { error: String(result.error) });
   }
-
-  const result = envSchema.safeParse(process.env);
-
-  if (!result.success) {
-    const errors = result.error.errors
-      .map((e) => `  ${e.path.join('.')}: ${e.message}`)
-      .join('\n');
-    throw new Error(`Environment validation failed:\n${errors}`);
-  }
-
-  cachedEnv = result.data;
-  return cachedEnv;
 }
 
-export function getEnv(): BackendEnv {
-  if (!cachedEnv) {
-    return loadEnv();
+// Environment Schema
+const envSchema = z.object({
+  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  PORT: z.string().transform(Number).default('3000'),
+  DATABASE_PATH: z.string().default('./.data/tradeapp.sqlite'),
+  API_BASE_PATH: z.string().default('/api'),
+  
+  // Auth
+  API_KEY: z.string().optional(),
+  
+  // Push
+  VAPID_SUBJECT: z.string().default('mailto:admin@example.com'),
+  VAPID_PUBLIC_KEY: z.string().optional(),
+  VAPID_PRIVATE_KEY: z.string().optional(),
+  
+  // AI
+  OPENAI_API_KEY: z.string().optional(),
+  OPENAI_BASE_URL: z.string().default('https://api.openai.com/v1'),
+  
+  DEEPSEEK_API_KEY: z.string().optional(),
+  DEEPSEEK_BASE_URL: z.string().default('https://api.deepseek.com'),
+  DEEPSEEK_MODEL_REASONING: z.string().default('deepseek-reasoner'),
+
+  // Grok Pulse
+  GROK_API_KEY: z.string().optional(),
+  GROK_BASE_URL: z.string().default('https://api.x.ai/v1'),
+  MORALIS_API_KEY: z.string().optional(),
+  GROK_PULSE_CRON_SECRET: z.string().optional(),
+  MAX_DAILY_GROK_CALLS: z.string().transform(Number).default('900'),
+  PULSE_TOKEN_ADDRESSES: z.string().default(''), // comma-separated
+  
+  // Vercel KV
+  KV_REST_API_URL: z.string().optional(),
+  KV_REST_API_TOKEN: z.string().optional(),
+
+  // Monitoring
+  WATCHER_INTERVAL_MS: z.string().transform(Number).default('5000'),
+  EVALUATION_BATCH_SIZE: z.string().transform(Number).default('200'),
+  EVENT_RETENTION_DAYS: z.string().transform(Number).default('30'),
+  SSE_HEARTBEAT_MS: z.string().transform(Number).default('20000'),
+});
+
+export type Env = z.infer<typeof envSchema>;
+
+let envCache: Env | null = null;
+
+export function getEnv(): Env {
+  if (envCache) return envCache;
+  
+  const parsed = envSchema.safeParse(process.env);
+  
+  if (!parsed.success) {
+    logger.error('Invalid environment variables', { errors: parsed.error.format() });
+    throw new Error('Invalid environment variables');
   }
-  return cachedEnv;
+  
+  envCache = parsed.data;
+  return envCache;
 }
 
 export function resetEnvCache(): void {
-  cachedEnv = null;
+  envCache = null;
 }
