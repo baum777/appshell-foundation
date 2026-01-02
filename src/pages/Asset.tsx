@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { isValidSolanaBase58 } from "@/routes/routes";
+import { GrokPulseCard } from "@/components/grokPulse";
 
 export default function Asset() {
   const { assetId } = useParams<{ assetId: string }>();
@@ -12,7 +13,7 @@ export default function Asset() {
 
   return (
     <PageContainer testId="page-asset">
-      <div className="space-y-4">
+      <div className="space-y-6">
         <h1 className="text-2xl font-bold tracking-tight text-foreground">
           Asset Hub
         </h1>
@@ -34,6 +35,13 @@ export default function Asset() {
             Platzhalter: hier werden Chart/Alerts/Oracle/Journal für ein Token gebündelt.
           </p>
         </div>
+
+        {/* Grok Pulse Section */}
+        {isValid && (
+          <section data-testid="section-grok-pulse">
+            <GrokPulseCard address={id} />
+          </section>
+        )}
 
         <div className="flex flex-wrap gap-2">
           <Button asChild>
