@@ -14,12 +14,13 @@ export default createHandler({
     
     const id = req.query.id as string;
     
-    const existing = await journalGetById(id);
+    // userId is now REQUIRED for all journal operations (multitenancy)
+    const existing = await journalGetById(userId, id);
     if (!existing) {
       throw notFound(`Journal entry not found: ${id}`, ErrorCodes.JOURNAL_NOT_FOUND);
     }
     
-    const entry = await journalRestore(id);
+    const entry = await journalRestore(userId, id);
     
     if (!entry) {
       throw notFound(`Journal entry not found: ${id}`, ErrorCodes.JOURNAL_NOT_FOUND);

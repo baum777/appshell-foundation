@@ -8,6 +8,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { WifiOff } from "lucide-react";
+import { useOffline } from "@/components/offline/OfflineContext";
 import type { JournalEntryStub } from "@/stubs/contracts";
 
 interface JournalDeleteDialogProps {
@@ -23,8 +26,10 @@ export function JournalDeleteDialog({
   onClose,
   onDelete,
 }: JournalDeleteDialogProps) {
+  const { isOnline } = useOffline();
+
   const handleDelete = () => {
-    if (!entry) return;
+    if (!entry || !isOnline) return;
     onDelete(entry.id);
     onClose();
   };
@@ -46,10 +51,20 @@ export function JournalDeleteDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
 
+        {!isOnline && (
+          <Alert variant="destructive" className="mb-4">
+            <WifiOff className="h-4 w-4" />
+            <AlertDescription>
+              You are offline. Delete action is disabled.
+            </AlertDescription>
+          </Alert>
+        )}
+
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
           <AlertDialogAction
             onClick={handleDelete}
+            disabled={!isOnline}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
             Delete
