@@ -1,32 +1,37 @@
-/**
- * GET /api/alerts/events - Get alert events for SW/UI dedupe
- */
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { buildRailwayUrl, getEnvOrThrow } from '../_lib/alertsProxy';
 
-import { createHandler, getQueryParams } from '../_lib/handler';
-import { sendJson, setCacheHeaders } from '../_lib/response';
-import { validateQuery, alertEventsQuerySchema } from '../_lib/validation';
-import { alertEventsQuery } from '../_lib/domain/alerts/events-repo';
-import { checkRateLimit } from '../_lib/rate-limit';
-import type { AlertEmitted } from '../_lib/types';
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'GET') {
+    res.status(405).json({ error: 'Method not allowed' });
+    return;
+  }
 
-interface AlertEventsResponse {
-  items: AlertEmitted[];
+  const { userId, since, limit } = req.query;
+
+  if (!userId || typeof userId !== 'string') {
+    res.status(400).json({ error: 'userId is required' });
+    return;
+  }
+
+  try {
+    const apiKey = getEnvOrThrow('ALERTS_API_KEY');
+    const queryParams: Record<string, string> = { userId };
+    if (typeof since === 'string') queryParams.since = since;
+    if (typeof limit === 'string') queryParams.limit = limit;
+
+    const url = buildRailwayUrl('/events', queryParams);
+
+    const upstreamRes = await fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${apiKey}`
+      }
+    });
+
+    const data = await upstreamRes.json();
+    res.status(upstreamRes.status).json(data);
+  } catch (error: any) {
+    console.error('Events proxy error:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
 }
-
-export default createHandler({
-  GET: async ({ req, res, userId }) => {
-    await checkRateLimit('alerts', userId);
-    
-    const query = validateQuery(alertEventsQuerySchema, getQueryParams(req));
-    
-    const events = await alertEventsQuery(query.since, query.limit);
-    
-    setCacheHeaders(res, { noStore: true });
-    
-    const response: AlertEventsResponse = {
-      items: events,
-    };
-    
-    sendJson(res, response);
-  },
-});
