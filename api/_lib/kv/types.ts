@@ -68,6 +68,11 @@ export const kvKeys = {
   // Reasoning cache
   reasoningCache: (type: string, referenceId: string, version: string, cacheKey: string) =>
     `${KV_PREFIX}reasoning:cache:${type}:${referenceId}:${version}:${cacheKey}`,
+
+  // Grok Pulse
+  pulseLatest: (query: string) => `${KV_PREFIX}pulse:latest:${query}`,
+  pulseHistory: (query: string) => `${KV_PREFIX}pulse:history:${query}`,
+  pulseLock: (query: string) => `${KV_PREFIX}pulse:lock:${query}`,
 } as const;
 
 // TTL constants in seconds
@@ -93,6 +98,10 @@ export const kvTTL = {
   // Provider cache: candles 5min, holders 30min
   cacheCandles: 5 * 60,
   cacheHolders: 30 * 60,
+  // Pulse
+  pulseLatest: 24 * 60 * 60, // 24h cache for latest
+  pulseHistory: 7 * 24 * 60 * 60, // 7 days for history
+  pulseLock: 60, // 1 min lock
 } as const;
 
 // KV Store Interface
