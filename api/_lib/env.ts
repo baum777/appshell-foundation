@@ -14,6 +14,9 @@ export interface BackendEnv {
   MORALIS_API_KEY?: string;
   // AI (optional)
   OPENAI_API_KEY?: string;
+  OPUS_MODEL?: string;
+  // Optional upstream backend (e.g. Railway) for reasoning routes
+  REASONING_BACKEND_URL?: string;
 }
 
 let cachedEnv: BackendEnv | null = null;
@@ -29,6 +32,8 @@ export function getEnv(): BackendEnv {
     DEXPAPRIKA_API_KEY: process.env.DEXPAPRIKA_API_KEY,
     MORALIS_API_KEY: process.env.MORALIS_API_KEY,
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+    OPUS_MODEL: process.env.OPUS_MODEL,
+    REASONING_BACKEND_URL: process.env.REASONING_BACKEND_URL,
   };
 
   return cachedEnv;

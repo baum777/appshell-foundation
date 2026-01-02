@@ -1,0 +1,80 @@
+import { z } from 'zod';
+
+export const criticIssueSchema = z.object({
+  kind: z.enum(['contradiction', 'missing_data', 'overreach']),
+  message: z.string().min(1),
+  fields: z.array(z.string().min(1)).optional(),
+});
+
+export const insightCriticReportSchema = z.object({
+  issues: z.array(criticIssueSchema),
+  adjustedConfidence: z.number().min(0).max(1),
+  notes: z.array(z.string()),
+});
+
+export const tradeReviewInsightSchema = z.object({
+  type: z.literal('trade-review'),
+  referenceId: z.string().min(1),
+  verdict: z.enum(['GOOD_PROCESS', 'MIXED', 'BAD_PROCESS']),
+  decision: z.object({
+    shouldRepeat: z.boolean(),
+    reason: z.string().min(1),
+  }),
+  highlights: z.array(z.string()),
+  risks: z.array(
+    z.object({
+      label: z.string().min(1),
+      severity: z.enum(['low', 'medium', 'high']),
+      evidence: z.array(z.string()),
+    })
+  ),
+  fixes: z.array(
+    z.object({
+      action: z.string().min(1),
+      why: z.string().min(1),
+    })
+  ),
+  questions: z.array(z.string()),
+  critic: insightCriticReportSchema,
+});
+
+export const sessionReviewInsightSchema = z.object({
+  type: z.literal('session-review'),
+  referenceId: z.string().min(1),
+  summary: z.string().min(1),
+  decisions: z.array(z.object({ decision: z.string().min(1), rationale: z.string().min(1) })),
+  patterns: z.array(z.object({ pattern: z.string().min(1), evidence: z.array(z.string()) })),
+  nextSessionPlan: z.array(z.object({ action: z.string().min(1), trigger: z.string().min(1) })),
+  critic: insightCriticReportSchema,
+});
+
+export const boardScenarioSchema = z.object({
+  name: z.string().min(1),
+  probability: z.number().min(0).max(1),
+  triggers: z.array(z.string()),
+  plan: z.object({
+    actions: z.array(z.string()),
+    invalidation: z.string().min(1),
+    riskRule: z.string().min(1),
+  }),
+});
+
+export const boardScenariosInsightSchema = z.object({
+  type: z.literal('board-scenarios'),
+  referenceId: z.string().min(1),
+  scenarios: z.array(boardScenarioSchema).min(1),
+  critic: insightCriticReportSchema,
+});
+
+export const insightCriticOnlyResultSchema = z.object({
+  type: z.literal('insight-critic'),
+  referenceId: z.string().min(1),
+  report: insightCriticReportSchema,
+});
+
+export type TradeReviewInsight = z.infer<typeof tradeReviewInsightSchema>;
+export type SessionReviewInsight = z.infer<typeof sessionReviewInsightSchema>;
+export type BoardScenariosInsight = z.infer<typeof boardScenariosInsightSchema>;
+export type InsightCriticOnlyResult = z.infer<typeof insightCriticOnlyResultSchema>;
+
+

@@ -20,6 +20,10 @@ import {
   handleOracleReadState,
   handleOracleBulkReadState,
   handleTAAnalysis,
+  handleReasoningTradeReview,
+  handleReasoningSessionReview,
+  handleReasoningBoardScenarios,
+  handleReasoningInsightCritic,
 } from './routes/index.js';
 
 /**
@@ -59,6 +63,12 @@ export function createApp(): Router {
   
   // Chart TA Route
   router.post('/chart/ta', handleTAAnalysis);
+
+  // Reasoning Routes
+  router.post('/reasoning/trade-review', handleReasoningTradeReview);
+  router.post('/reasoning/session-review', handleReasoningSessionReview);
+  router.post('/reasoning/board-scenarios', handleReasoningBoardScenarios);
+  router.post('/reasoning/insight-critic', handleReasoningInsightCritic);
   
   return router;
 }
