@@ -2,19 +2,19 @@
  * Journal Domain Types & Repository Interface
  * MULTITENANT: All operations require userId - no global state
  * 
- * SQLite Schema (userId-scoped):
- * - All queries MUST include WHERE userId = ?
- * - No global queries, no fallback userId
+ * Key Schema (KV):
+ * - sf:v1:journal:{userId}:entry:{id}
+ * - sf:v1:journal:{userId}:day:{YYYY-MM-DD}:ids
+ * - sf:v1:journal:{userId}:status:PENDING:ids
+ * - sf:v1:journal:{userId}:status:ARCHIVED:ids
+ * - sf:v1:journal:{userId}:index:updatedAt
  */
 
 // ─────────────────────────────────────────────────────────────
-// STATUS ENUM (uppercase for consistency)
+// STATUS ENUM (uppercase for KV key consistency)
 // ─────────────────────────────────────────────────────────────
 
 export type JournalStatus = 'PENDING' | 'CONFIRMED' | 'ARCHIVED';
-
-// Legacy status mapping for backward compatibility
-export type LegacyJournalStatus = 'pending' | 'confirmed' | 'archived';
 
 // Mapping from legacy lowercase to new uppercase
 export function normalizeStatus(status: string): JournalStatus {
@@ -23,11 +23,6 @@ export function normalizeStatus(status: string): JournalStatus {
     return upper;
   }
   throw new Error(`Invalid journal status: ${status}`);
-}
-
-// Convert to legacy lowercase (for DB compatibility during migration)
-export function toLegacyStatus(status: JournalStatus): LegacyJournalStatus {
-  return status.toLowerCase() as LegacyJournalStatus;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -63,44 +58,6 @@ export interface JournalEvent {
 }
 
 // ─────────────────────────────────────────────────────────────
-// LEGACY TYPES (for compatibility with existing DB schema)
-// ─────────────────────────────────────────────────────────────
-
-export interface JournalEntry {
-  id: string;
-  side: JournalEntrySide;
-  status: LegacyJournalStatus;
-  timestamp: string;
-  summary: string;
-}
-
-export interface JournalEntryRow {
-  id: string;
-  user_id: string; // Added for multitenancy
-  side: string;
-  status: string;
-  timestamp: string;
-  summary: string;
-  day_key: string; // Added for indexing
-  created_at: string;
-  updated_at: string;
-}
-
-export interface JournalConfirmationRow {
-  entry_id: string;
-  mood: string;
-  note: string;
-  tags_json: string;
-  confirmed_at: string;
-}
-
-export interface JournalArchiveRow {
-  entry_id: string;
-  reason: string;
-  archived_at: string;
-}
-
-// ─────────────────────────────────────────────────────────────
 // REQUEST/RESPONSE TYPES
 // ─────────────────────────────────────────────────────────────
 
@@ -116,11 +73,11 @@ export interface JournalConfirmPayload {
   tags: string[];
 }
 
-export interface JournalArchiveRequest {
+export interface JournalArchivePayload {
   reason: string;
 }
 
-export interface JournalListResponse {
+export interface JournalListResult {
   items: JournalEvent[];
   nextCursor?: string;
 }
@@ -216,3 +173,4 @@ export function assertUserId(userId: string | undefined | null): asserts userId 
     throw new Error('userId is required for all journal operations - no global fallback allowed');
   }
 }
+

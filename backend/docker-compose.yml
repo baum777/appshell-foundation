@@ -1,0 +1,15 @@
+services:
+  api:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/.data
+    environment:
+      - NODE_ENV=production
+      - BACKEND_PORT=3000
+      - LOG_LEVEL=info
+      # Override if you want a specific file name or path inside the volume
+      - DATABASE_URL=sqlite:/app/.data/tradeapp.sqlite
+    restart: always
+

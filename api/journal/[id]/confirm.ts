@@ -16,21 +16,22 @@ export default createHandler({
     const id = req.query.id as string;
     const payload = validateBody(journalConfirmPayloadSchema, req.body);
     
+    // userId is now REQUIRED for all journal operations (multitenancy)
     // First check if entry exists
-    const existing = await journalGetById(id);
+    const existing = await journalGetById(userId, id);
     if (!existing) {
       throw notFound(`Journal entry not found: ${id}`, ErrorCodes.JOURNAL_NOT_FOUND);
     }
     
     // Check for invalid state (can't confirm archived)
-    if (existing.status === 'archived') {
+    if (existing.status === 'ARCHIVED') {
       throw conflict(
         'Cannot confirm an archived entry',
         ErrorCodes.JOURNAL_INVALID_STATE
       );
     }
     
-    const entry = await journalConfirm(id, payload);
+    const entry = await journalConfirm(userId, id, payload);
     
     if (!entry) {
       throw notFound(`Journal entry not found: ${id}`, ErrorCodes.JOURNAL_NOT_FOUND);

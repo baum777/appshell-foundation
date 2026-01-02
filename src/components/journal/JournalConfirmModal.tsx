@@ -18,6 +18,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { WifiOff } from "lucide-react";
+import { useOffline } from "@/components/offline/OfflineContext";
 import type { JournalEntryStub } from "@/stubs/contracts";
 import type { ConfirmPayload } from "@/stubs/hooks";
 
@@ -42,12 +45,13 @@ export function JournalConfirmModal({
   onClose,
   onConfirm,
 }: JournalConfirmModalProps) {
+  const { isOnline } = useOffline();
   const [mood, setMood] = useState("neutral");
   const [note, setNote] = useState("");
   const [tagsInput, setTagsInput] = useState("");
 
   const handleConfirm = () => {
-    if (!entry) return;
+    if (!entry || !isOnline) return;
 
     const tags = tagsInput
       .split(",")
@@ -120,11 +124,22 @@ export function JournalConfirmModal({
           </div>
         </div>
 
+        {!isOnline && (
+          <Alert variant="destructive" className="mb-4">
+            <WifiOff className="h-4 w-4" />
+            <AlertDescription>
+              You are offline. Confirm action is disabled.
+            </AlertDescription>
+          </Alert>
+        )}
+
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={handleConfirm}>Confirm Entry</Button>
+          <Button onClick={handleConfirm} disabled={!isOnline}>
+            Confirm Entry
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

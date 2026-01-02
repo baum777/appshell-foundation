@@ -56,9 +56,9 @@ beforeEach(() => {
   // Disable foreign keys temporarily for cleanup
   db.exec('PRAGMA foreign_keys = OFF');
   
-  db.exec('DELETE FROM journal_confirmations_v1');
-  db.exec('DELETE FROM journal_archives_v1');
-  db.exec('DELETE FROM journal_entries_v1');
+  db.exec('DELETE FROM journal_confirmations_v2');
+  db.exec('DELETE FROM journal_archives_v2');
+  db.exec('DELETE FROM journal_entries_v2');
   db.exec('DELETE FROM alert_events_v1');
   db.exec('DELETE FROM alerts_v1');
   db.exec('DELETE FROM oracle_read_state_v1');

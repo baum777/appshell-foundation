@@ -9,6 +9,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -17,6 +18,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { WifiOff } from "lucide-react";
+import { useOffline } from "@/components/offline/OfflineContext";
 import type { JournalEntryStub } from "@/stubs/contracts";
 
 const ARCHIVE_REASONS = [
@@ -40,10 +43,11 @@ export function JournalArchiveDialog({
   onClose,
   onArchive,
 }: JournalArchiveDialogProps) {
+  const { isOnline } = useOffline();
   const [reason, setReason] = useState("market_changed");
 
   const handleArchive = () => {
-    if (!entry) return;
+    if (!entry || !isOnline) return;
     onArchive(entry.id, reason);
     setReason("market_changed");
     onClose();
@@ -84,9 +88,20 @@ export function JournalArchiveDialog({
           </div>
         </div>
 
+        {!isOnline && (
+          <Alert variant="destructive" className="mb-4">
+            <WifiOff className="h-4 w-4" />
+            <AlertDescription>
+              You are offline. Archive action is disabled.
+            </AlertDescription>
+          </Alert>
+        )}
+
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={handleArchive}>Archive</AlertDialogAction>
+          <AlertDialogAction onClick={handleArchive} disabled={!isOnline}>
+            Archive
+          </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
