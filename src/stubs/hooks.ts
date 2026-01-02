@@ -329,7 +329,7 @@ export function useOracleStub(): UseOracleStubReturn {
 // Settings stub hook
 export interface SettingsState {
   // Appearance
-  theme: 'light' | 'dark';
+  theme: 'dark';
   density: 'comfortable' | 'compact';
   // Chart
   defaultTimeframe: string;

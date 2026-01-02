@@ -50,7 +50,7 @@ export function OpenSymbolPickerButton({
       variant={variant}
       size={size}
       className={cn(
-        'focus-visible:ring-2 focus-visible:ring-ring',
+        'focus-visible:ring-2 focus-visible:ring-brand',
         iconOnly && 'h-9 w-9 p-0',
         className
       )}

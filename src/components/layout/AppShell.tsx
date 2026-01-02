@@ -4,7 +4,7 @@
  * Per Global UI Infrastructure spec
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
@@ -20,6 +20,17 @@ import {
 
 export function AppShell() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  // Dark-only enforcement (no light/system mode in v1).
+  useEffect(() => {
+    document.documentElement.classList.add("dark");
+    document.documentElement.classList.remove("light");
+    try {
+      localStorage.setItem("sparkfined_theme_v1", "dark");
+    } catch {
+      // ignore
+    }
+  }, []);
 
   return (
     <OfflineProvider>

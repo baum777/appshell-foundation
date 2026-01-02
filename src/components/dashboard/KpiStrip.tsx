@@ -46,7 +46,7 @@ export function KpiStrip({ kpis }: KpiStripProps) {
                           <TooltipTrigger asChild>
                             <button 
                               type="button"
-                              className="shrink-0 rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+                              className="shrink-0 rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1"
                               aria-label={`Info about ${kpi.label}`}
                             >
                               <Info className="h-3 w-3 text-muted-foreground/50 hover:text-muted-foreground transition-colors" />

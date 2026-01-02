@@ -12,7 +12,7 @@ export const mockUser = {
   lastName: 'User',
   role: 'user' as const,
   preferences: {
-    theme: 'light' as const,
+    theme: 'dark' as const,
     language: 'en' as const,
     timezone: 'UTC',
     notifications: {

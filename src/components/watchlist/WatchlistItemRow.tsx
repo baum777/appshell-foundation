@@ -58,7 +58,7 @@ export function WatchlistItemRow({
     >
       <button
         onClick={onSelect}
-        className="flex-1 flex items-center gap-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm"
+        className="flex-1 flex items-center gap-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 rounded-sm"
         aria-pressed={isSelected}
       >
         <div className="flex-1 min-w-0">

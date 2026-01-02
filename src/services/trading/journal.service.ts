@@ -183,17 +183,15 @@ class JournalService {
     id: string,
     files: File[]
   ): Promise<ApiResponse<string[]>> {
-    const formData = new FormData();
-    files.forEach(file => formData.append('screenshots', file));
-
-    return apiClient.post<string[]>(
-      `${this.basePath}/${id}/screenshots`,
-      formData as unknown,
-      {
-        // Content-Type wird automatisch von FormData gesetzt
-        headers: {},
-      }
-    );
+    // BACKEND_TODO: Support multipart/form-data uploads (ApiClient currently JSON-only).
+    // BACKEND_TODO: Replace with real upload endpoint integration.
+    void id;
+    void files;
+    return {
+      data: [],
+      status: 501,
+      message: 'Not implemented (v1 UI stub)',
+    };
   }
 
   /**

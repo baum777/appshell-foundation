@@ -47,11 +47,16 @@ function getRecentSymbols(): SymbolItem[] {
   }
 }
 
+function normalizeSymbolKey(value: string): string {
+  return value.trim().toLowerCase();
+}
+
 function addRecentSymbol(symbol: SymbolItem) {
   try {
-    // Dedupe by symbol
-    const recents = getRecentSymbols().filter((s) => s.symbol !== symbol.symbol);
-    recents.unshift({ ...symbol, isRecent: true });
+    // Dedupe (trim + case-insensitive) + move-to-top (per spec)
+    const key = normalizeSymbolKey(symbol.symbol);
+    const recents = getRecentSymbols().filter((s) => normalizeSymbolKey(s.symbol) !== key);
+    recents.unshift({ ...symbol, symbol: symbol.symbol.trim(), isRecent: true });
     localStorage.setItem(RECENTS_KEY, JSON.stringify(recents.slice(0, MAX_RECENTS)));
   } catch {
     // Ignore storage errors
@@ -85,11 +90,32 @@ export function SymbolPicker({ onSelect, onBack, showBackButton = true, classNam
   const listRef = React.useRef<HTMLDivElement>(null);
   
   // Get watchlist and recents
-  const watchlist = React.useMemo(() => makeWatchlist(8).map(w => ({ 
-    symbol: w.symbol, 
-    name: w.name, 
-    isWatchlist: true 
-  })), []);
+  const watchlist = React.useMemo(() => {
+    // Prefer existing watchlist local source if present (per spec).
+    try {
+      const stored = localStorage.getItem('sparkfined_watchlist_v1');
+      if (stored) {
+        const parsed = JSON.parse(stored) as Array<{ symbol: string; name?: string }>;
+        return parsed
+          .filter((w) => typeof w?.symbol === 'string' && w.symbol.trim())
+          .slice(0, 24)
+          .map((w) => ({
+            symbol: w.symbol.trim(),
+            name: (w.name || w.symbol).trim(),
+            isWatchlist: true,
+          }));
+      }
+    } catch {
+      // ignore
+    }
+
+    // BACKEND_TODO: wire SymbolPicker watchlist to backend source of truth
+    return makeWatchlist(8).map((w) => ({
+      symbol: w.symbol,
+      name: w.name,
+      isWatchlist: true,
+    }));
+  }, []);
   
   const recents = React.useMemo(() => getRecentSymbols(), []);
   
@@ -99,18 +125,18 @@ export function SymbolPicker({ onSelect, onBack, showBackButton = true, classNam
     
     // Add recents first
     recents.forEach((s) => {
-      if (!allSymbols.find((x) => x.symbol === s.symbol)) {
+      if (!allSymbols.find((x) => normalizeSymbolKey(x.symbol) === normalizeSymbolKey(s.symbol))) {
         allSymbols.push({ ...s, isRecent: true });
       }
     });
     
     // Add watchlist
     watchlist.forEach((s) => {
-      if (!allSymbols.find((x) => x.symbol === s.symbol)) {
+      if (!allSymbols.find((x) => normalizeSymbolKey(x.symbol) === normalizeSymbolKey(s.symbol))) {
         allSymbols.push(s);
       } else {
         // Mark as both
-        const existing = allSymbols.find((x) => x.symbol === s.symbol);
+        const existing = allSymbols.find((x) => normalizeSymbolKey(x.symbol) === normalizeSymbolKey(s.symbol));
         if (existing) existing.isWatchlist = true;
       }
     });
@@ -134,7 +160,7 @@ export function SymbolPicker({ onSelect, onBack, showBackButton = true, classNam
     filteredSymbols
       .filter((s) => s.isWatchlist && (!search || !s.isRecent))
       .forEach((s) => {
-        if (!list.find((x) => x.symbol === s.symbol)) {
+        if (!list.find((x) => normalizeSymbolKey(x.symbol) === normalizeSymbolKey(s.symbol))) {
           list.push(s);
         }
       });
@@ -217,6 +243,7 @@ export function SymbolPicker({ onSelect, onBack, showBackButton = true, classNam
         break;
       case 'journal':
         navigate('/journal');
+        // BACKEND_TODO: prefill journal entry with selected symbol
         break;
     }
     
@@ -348,9 +375,9 @@ function SymbolRow({ symbol, isExpanded, isSelected, onClick, onAction, isOfflin
         className={cn(
           'w-full flex items-center justify-between px-2 py-2 rounded-md text-left',
           'hover:bg-accent/50 transition-colors',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
           isExpanded && 'bg-accent/30',
-          isSelected && 'bg-accent/20 ring-1 ring-ring/50'
+          isSelected && 'bg-accent/20 ring-1 ring-brand/50'
         )}
       >
         <div className="flex items-center gap-2 min-w-0">

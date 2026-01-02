@@ -40,6 +40,10 @@
     --input: 220 14% 18%;
     --ring: 174 72% 46%;
 
+    --brand: var(--primary);
+    --brand-foreground: var(--primary-foreground);
+    --overlay: 220 20% 2% / 0.82;
+
     --radius: 0.5rem;
 
     --sidebar-background: 220 20% 5%;
@@ -72,7 +76,7 @@
 
   /* Focus ring styles for a11y */
   *:focus-visible {
-    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+    @apply outline-none ring-2 ring-brand ring-offset-2 ring-offset-background;
   }
 
   /* Safe area for mobile bottom nav */

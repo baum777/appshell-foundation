@@ -175,7 +175,7 @@ function ActionButton({ icon, label, onClick }: ActionButtonProps) {
       className={cn(
         'flex flex-col items-center justify-center gap-1.5 p-3 rounded-lg',
         'bg-muted/50 hover:bg-muted transition-colors',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
         'min-h-[64px]'
       )}
     >
@@ -198,7 +198,7 @@ function NavButton({ icon, label, onClick }: NavButtonProps) {
       className={cn(
         'w-full flex items-center gap-3 px-3 py-2.5 rounded-md',
         'hover:bg-accent/50 transition-colors text-left',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
         'min-h-[44px]'
       )}
     >

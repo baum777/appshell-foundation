@@ -17,7 +17,7 @@ import { shouldPoll, recordPollSuccess, recordPollFailure, handleRateLimit } fro
 declare const self: ServiceWorkerGlobalScope & typeof globalThis;
 
 const ALERTS_LAST_SINCE_KEY = 'alerts:lastSince';
-const API_BASE = import.meta.env.VITE_API_URL || '/api';
+const API_BASE = '/api';
 
 /**
  * Get notification title for alert event
@@ -32,10 +32,10 @@ function getNotificationTitle(event: AlertEmitted): string {
       return `Confirmed Signal: ${symbol}`;
     case 'DEAD_TOKEN_STAGE':
     case 'DEAD_TOKEN_SESSION_ENDED':
-    {
-      const stage = event.detail?.deadTokenStage || event.type;
-      return `Dead Token: ${symbol} — ${stage}`;
-    }
+      {
+        const stage = event.detail?.deadTokenStage || event.type;
+        return `Dead Token: ${symbol} — ${stage}`;
+      }
     default:
       return `Alert: ${symbol}`;
   }

@@ -23,7 +23,7 @@ export function BottomNav() {
               data-testid={item.testId}
               className={cn(
                 "flex flex-col items-center justify-center gap-1 px-3 py-2 min-w-[64px] transition-colors",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset rounded-md",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset rounded-md",
                 isActive ? "mobile-nav-active" : "mobile-nav-inactive"
               )}
               aria-current={isActive ? "page" : undefined}

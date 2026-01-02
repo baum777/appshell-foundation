@@ -16,7 +16,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   Dialog,
   DialogContent,
@@ -42,7 +41,7 @@ const STORAGE_KEYS = {
   watchlist: "sparkfined_watchlist_v1",
 } as const;
 
-type ThemeOption = "system" | "light" | "dark";
+type ThemeOption = "dark";
 
 export default function Settings() {
   const isMobile = useIsMobile();
@@ -55,7 +54,7 @@ export default function Settings() {
   // Theme (persisted)
   const [theme, setTheme] = useState<ThemeOption>(() => {
     const stored = localStorage.getItem(STORAGE_KEYS.theme);
-    return (stored as ThemeOption) || "system";
+    return stored === "dark" ? "dark" : "dark";
   });
 
   // App preferences (local)
@@ -80,7 +79,8 @@ export default function Settings() {
 
   // Persist theme to localStorage
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.theme, theme);
+    // Dark-only (v1): persist but never expose light/system.
+    localStorage.setItem(STORAGE_KEYS.theme, "dark");
     // BACKEND_TODO: sync across devices
   }, [theme]);
 
@@ -139,7 +139,7 @@ User Agent: ${navigator.userAgent}`;
     localStorage.removeItem(STORAGE_KEYS.watchlist);
 
     // Reset local state
-    setTheme("system");
+    setTheme("dark");
     setReduceMotion(false);
     setCompactMode(false);
 
@@ -182,23 +182,8 @@ User Agent: ${navigator.userAgent}`;
   // App Preferences Section
   const AppPreferencesSection = () => (
     <div className="space-y-4">
-      <SettingsRow label="Theme" description="Choose your preferred color scheme">
-        <ToggleGroup
-          type="single"
-          value={theme}
-          onValueChange={(value) => value && setTheme(value as ThemeOption)}
-          className="justify-start"
-        >
-          <ToggleGroupItem value="system" aria-label="System theme">
-            System
-          </ToggleGroupItem>
-          <ToggleGroupItem value="light" aria-label="Light theme">
-            Light
-          </ToggleGroupItem>
-          <ToggleGroupItem value="dark" aria-label="Dark theme">
-            Dark
-          </ToggleGroupItem>
-        </ToggleGroup>
+      <SettingsRow label="Theme" description="Dark mode only (v1)">
+        <Badge variant="secondary">Dark</Badge>
       </SettingsRow>
       <SettingsRow label="Reduce motion" description="Minimize animations throughout the app">
         <Switch

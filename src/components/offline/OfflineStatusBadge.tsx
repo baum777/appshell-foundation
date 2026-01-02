@@ -34,7 +34,7 @@ export function OfflineStatusBadge({
   className,
   showLastSynced = false,
 }: OfflineStatusBadgeProps) {
-  const { isOnline, syncState, queuedCount, lastSyncedAt } = useOffline();
+  const { isOnline, syncState, queuedCount, lastSyncedAt, markQueued, markSynced } = useOffline();
   
   // Force re-render for time updates
   const [, setTick] = React.useState(0);
@@ -100,13 +100,24 @@ export function OfflineStatusBadge({
       </div>
       
       {/* Sync Badge */}
-      <div
+      <button
+        type="button"
+        onClick={() => {
+          // UI-only toggle (stub) per spec: allow toggling queued/synced.
+          if (syncState === 'synced') {
+            markQueued('Manual sync toggle');
+          } else {
+            markSynced();
+          }
+        }}
         className={cn(
-          'flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium',
+          'flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-colors',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-background',
           syncState === 'synced'
-            ? 'bg-muted text-muted-foreground'
-            : 'bg-warning/10 text-warning'
+            ? 'bg-muted text-muted-foreground hover:bg-muted/80'
+            : 'bg-warning/10 text-warning hover:bg-warning/15'
         )}
+        aria-label={syncState === 'synced' ? 'Toggle to queued (stub)' : 'Mark all synced (stub)'}
       >
         {syncState === 'synced' ? (
           <>
@@ -119,12 +130,12 @@ export function OfflineStatusBadge({
             <span>Queued ({queuedCount})</span>
           </>
         )}
-      </div>
+      </button>
       
       {/* Last synced time */}
-      {showLastSynced && lastSyncedAt && (
-        <span className="text-xs text-muted-foreground">
-          Updated {formatTimeAgo(lastSyncedAt)}
+      {showLastSynced && (
+        <span className="text-xs text-muted-foreground min-w-[100px] text-right">
+          {lastSyncedAt ? `Updated ${formatTimeAgo(lastSyncedAt)}` : 'Updated —'}
         </span>
       )}
     </div>

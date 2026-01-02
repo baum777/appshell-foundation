@@ -3,6 +3,8 @@ import App from "./App.tsx";
 import "./index.css";
 
 // Service Worker Registration
+const ENABLE_SW_POLLING = import.meta.env.VITE_ENABLE_SW_POLLING === "true";
+
 async function registerServiceWorker(): Promise<void> {
   // In dev/test the file `/sw.js` may not be served with a valid JS MIME type.
   // Register only for production builds.
@@ -41,16 +43,21 @@ async function registerServiceWorker(): Promise<void> {
       }
     });
 
-    // Send tick to SW every 30 seconds while app is open
-    setInterval(() => {
+    // BACKEND_TODO: enable polling only when backend is wired.
+    if (ENABLE_SW_POLLING) {
+      // Send tick to SW every 30 seconds while app is open
+      setInterval(() => {
+        if (navigator.serviceWorker.controller) {
+          navigator.serviceWorker.controller.postMessage({ type: 'SW_TICK' });
+        }
+      }, 30000);
+
+      // Send initial tick
       if (navigator.serviceWorker.controller) {
         navigator.serviceWorker.controller.postMessage({ type: 'SW_TICK' });
       }
-    }, 30000);
-
-    // Send initial tick
-    if (navigator.serviceWorker.controller) {
-      navigator.serviceWorker.controller.postMessage({ type: 'SW_TICK' });
+    } else {
+      console.log('[App] SW polling disabled (VITE_ENABLE_SW_POLLING!=true)');
     }
 
   } catch (error) {
