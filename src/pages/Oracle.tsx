@@ -13,6 +13,7 @@ import {
   OracleSkeleton,
   type OracleFilter,
 } from "@/components/oracle";
+import { GrokPulseLastRunWidget } from "@/components/grokPulse";
 import { toast } from "@/hooks/use-toast";
 import { usePageState } from "@/stubs/pageState";
 import { makeOracle } from "@/stubs/fixtures";
@@ -249,6 +250,11 @@ export default function Oracle() {
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
         />
+
+        {/* Grok Pulse Status Widget */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <GrokPulseLastRunWidget />
+        </div>
 
         {/* Pinned cards */}
         <div className="space-y-3">
