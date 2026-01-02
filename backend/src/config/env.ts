@@ -11,6 +11,9 @@ const envSchema = z.object({
   API_BASE_PATH: z.string().default('/api'),
   DATABASE_URL: z.string().default('sqlite:./.data/tradeapp.sqlite'),
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
+  // AI (optional)
+  OPENAI_API_KEY: z.string().optional(),
+  OPUS_MODEL: z.string().optional(),
 });
 
 export type BackendEnv = z.infer<typeof envSchema>;

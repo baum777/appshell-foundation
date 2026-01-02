@@ -64,6 +64,10 @@ export const kvKeys = {
   // Alert events
   alertEvent: (eventId: string) => `${KV_PREFIX}events:alert:${eventId}`,
   alertEventsIndex: () => `${KV_PREFIX}events:alert:index`,
+
+  // Reasoning cache
+  reasoningCache: (type: string, referenceId: string, version: string, cacheKey: string) =>
+    `${KV_PREFIX}reasoning:cache:${type}:${referenceId}:${version}:${cacheKey}`,
 } as const;
 
 // TTL constants in seconds
@@ -82,6 +86,8 @@ export const kvTTL = {
   oracleDaily: 36 * 60 * 60,
   // TA cache: 24h
   taCache: 24 * 60 * 60,
+  // Reasoning cache: 24h
+  reasoningCache: 24 * 60 * 60,
   // Rate limit buckets: 1h
   rateLimit: 60 * 60,
   // Provider cache: candles 5min, holders 30min

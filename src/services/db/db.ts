@@ -1,6 +1,7 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import type { Alert } from '@/components/alerts/types';
 import type { JournalEntry } from '@/services/trading/journal.service';
+import type { ReasoningCacheRow } from '@/services/reasoning/cache';
 
 interface TradeAppDB extends DBSchema {
   alerts: {
@@ -23,10 +24,15 @@ interface TradeAppDB extends DBSchema {
       timestamp: number;
     };
   };
+  reasoning: {
+    key: string;
+    value: ReasoningCacheRow;
+    indexes: { 'by-type': string; 'by-updated': string };
+  };
 }
 
 const DB_NAME = 'tradeapp-db';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 let dbPromise: Promise<IDBPDatabase<TradeAppDB>> | null = null;
 
@@ -51,6 +57,13 @@ function getDB() {
         // Sync Queue (for offline actions)
         if (!db.objectStoreNames.contains('syncQueue')) {
           db.createObjectStore('syncQueue', { keyPath: 'id' });
+        }
+
+        // Reasoning Cache
+        if (!db.objectStoreNames.contains('reasoning')) {
+          const store = db.createObjectStore('reasoning', { keyPath: 'key' });
+          store.createIndex('by-type', 'type');
+          store.createIndex('by-updated', 'updatedAt');
         }
       },
     });
@@ -98,6 +111,25 @@ export const dbService = {
   async removeFromSyncQueue(id: string): Promise<void> {
     const db = await getDB();
     await db.delete('syncQueue', id);
+  },
+
+  // ─────────────────────────────────────────────────────────────
+  // Reasoning Cache methods
+  // ─────────────────────────────────────────────────────────────
+
+  async getReasoning(key: string): Promise<ReasoningCacheRow | null> {
+    const db = await getDB();
+    return (await db.get('reasoning', key)) ?? null;
+  },
+
+  async saveReasoning(row: ReasoningCacheRow): Promise<void> {
+    const db = await getDB();
+    await db.put('reasoning', row);
+  },
+
+  async deleteReasoning(key: string): Promise<void> {
+    const db = await getDB();
+    await db.delete('reasoning', key);
   },
 };
 

@@ -17,6 +17,7 @@ const DEFAULT_LIMITS: Record<string, RateLimitConfig> = {
   oracle: { limit: 30, windowSeconds: 60 },
   ta: { limit: 10, windowSeconds: 60 },
   evaluate: { limit: 30, windowSeconds: 60 },
+  reasoning: { limit: 10, windowSeconds: 60 },
 };
 
 function getBucket(windowSeconds: number): string {

@@ -81,6 +81,8 @@ export const kvKeys = {
   oracleRead: (userId: string, insightId: string) => `kv:v1:oracle:read:${userId}:${insightId}`,
   taCache: (market: string, timeframe: string, replay: boolean, bucket: string) =>
     `kv:v1:ta:${market}:${timeframe}:${replay}:${bucket}`,
+  reasoningCache: (type: string, referenceId: string, version: string, cacheKey: string) =>
+    `kv:v1:reasoning:cache:${type}:${referenceId}:${version}:${cacheKey}`,
 };
 
 // TTL constants in seconds
@@ -90,4 +92,5 @@ export const kvTTL = {
   alertEvent: 30 * 24 * 60 * 60, // 30d
   oracleDaily: 36 * 60 * 60, // 36h
   taCache: 24 * 60 * 60, // 24h
+  reasoningCache: 24 * 60 * 60, // 24h
 };

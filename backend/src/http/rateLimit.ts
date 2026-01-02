@@ -78,6 +78,7 @@ export const rateLimiters = {
   alerts: createRateLimiter({ windowMs: 60000, max: 60 }),
   oracle: createRateLimiter({ windowMs: 60000, max: 30 }), // 30 req/min
   ta: createRateLimiter({ windowMs: 60000, max: 10 }), // 10 req/min (expensive)
+  reasoning: createRateLimiter({ windowMs: 60000, max: 10 }), // 10 req/min (expensive)
 };
 
 export function resetRateLimitStore(): void {
