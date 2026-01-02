@@ -47,6 +47,7 @@ export interface GrokSentimentSnapshot {
   // UI Helpers (Deterministic)
   sentiment_term?: string;
   cta_phrase?: string;
+  severity?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 }
 
 export interface PulseHistoryEntry {

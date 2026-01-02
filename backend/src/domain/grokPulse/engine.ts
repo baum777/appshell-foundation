@@ -12,6 +12,7 @@ import { getGlobalTokenList } from './sources.js';
 import { buildGrokContext } from './contextBuilder.js';
 import { calculateFallbackSentiment } from './fallback-sentiment.js';
 import { mapSentimentTerm, mapCtaPhrase } from './lexicon.js';
+import { calculateSeverity } from './severity.js';
 import type { GrokSentimentSnapshot, PulseGlobalToken } from './types.js';
 
 export async function runGrokPulseEngine(): Promise<{ processed: number, quota: number }> {
@@ -86,6 +87,7 @@ async function processToken(token: PulseGlobalToken, hasQuota: boolean) {
   // 3. Apply Lexicon (Deterministic UI helpers)
   snapshot.sentiment_term = mapSentimentTerm(snapshot);
   snapshot.cta_phrase = mapCtaPhrase(snapshot);
+  snapshot.severity = calculateSeverity(snapshot);
 
   // 4. Save
   await setPulseSnapshot(token.address, snapshot);
