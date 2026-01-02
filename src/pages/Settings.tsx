@@ -1,11 +1,18 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { ErrorBanner } from "@/components/layout/PageStates";
 import {
-  SettingsHeader,
   SettingsSectionCard,
   SettingsRow,
   SettingsSkeleton,
+  useSettingsStore,
+  useUsageStore,
+  TierBudgetsSection,
+  UsageCountersSection,
+  ProviderParamsSection,
+  CacheOfflineSection,
+  PushAlertsSection,
+  PrivacyDiagnosticsSection,
 } from "@/components/settings";
 import {
   Accordion,
@@ -27,43 +34,31 @@ import {
 import { usePageState } from "@/stubs/pageState";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "@/hooks/use-toast";
-import { Wallet, Copy, Check, AlertTriangle, Bell } from "lucide-react";
-
-// localStorage keys (exact)
-const STORAGE_KEYS = {
-  theme: "sparkfined_theme_v1",
-  recentSearches: "sparkfined_recent_searches_v1",
-  recentMarkets: "sparkfined_recent_markets_v1",
-  oracleRead: "sparkfined_oracle_read_v1",
-  alerts: "sparkfined_alerts_v1",
-  reduceMotion: "sparkfined_reduce_motion_v1",
-  compactMode: "sparkfined_compact_mode_v1",
-  watchlist: "sparkfined_watchlist_v1",
-} as const;
-
-type ThemeOption = "dark";
+import { 
+  Wallet, 
+  Check, 
+  Bell, 
+  Download, 
+  Upload, 
+  RotateCcw,
+  RefreshCw
+} from "lucide-react";
 
 export default function Settings() {
   const isMobile = useIsMobile();
   const pageState = usePageState("ready");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Stores
+  const settingsStore = useSettingsStore();
+  const usageStore = useUsageStore();
+
+  // Compute usedToday from usage store
+  const usedToday: Record<string, Record<string, number>> = usageStore.usage.counters.callsToday;
 
   // Wallet connection (UI-only stub)
   const [isWalletConnected, setIsWalletConnected] = useState(false);
   const [disconnectDialogOpen, setDisconnectDialogOpen] = useState(false);
-
-  // Theme (persisted)
-  const [theme, setTheme] = useState<ThemeOption>(() => {
-    const stored = localStorage.getItem(STORAGE_KEYS.theme);
-    return stored === "dark" ? "dark" : "dark";
-  });
-
-  // App preferences (local)
-  const [reduceMotion, setReduceMotion] = useState(() => {
-    return localStorage.getItem(STORAGE_KEYS.reduceMotion) === "true";
-  });
-  const [compactMode, setCompactMode] = useState(() => {
-    return localStorage.getItem(STORAGE_KEYS.compactMode) === "true";
-  });
 
   // Notification toggles (UI-only)
   const [priceAlerts, setPriceAlerts] = useState(true);
@@ -71,28 +66,11 @@ export default function Settings() {
   const [dailyOracleTakeaway, setDailyOracleTakeaway] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState<string>("default");
 
-  // Developer section
-  const [copiedDiagnostics, setCopiedDiagnostics] = useState(false);
+  // Dialogs
+  const [resetDefaultsDialogOpen, setResetDefaultsDialogOpen] = useState(false);
+  const [resetCountersDialogOpen, setResetCountersDialogOpen] = useState(false);
 
-  // Reset dialog
-  const [resetDialogOpen, setResetDialogOpen] = useState(false);
-
-  // Persist theme to localStorage
-  useEffect(() => {
-    // Dark-only (v1): persist but never expose light/system.
-    localStorage.setItem(STORAGE_KEYS.theme, "dark");
-    // BACKEND_TODO: sync across devices
-  }, [theme]);
-
-  // Persist app preferences
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.reduceMotion, String(reduceMotion));
-  }, [reduceMotion]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.compactMode, String(compactMode));
-  }, [compactMode]);
-
+  // Handlers
   const handleConnectWallet = () => {
     setIsWalletConnected(true);
     toast({ title: "Wallet connected", description: "Demo wallet connected successfully." });
@@ -107,46 +85,171 @@ export default function Settings() {
   };
 
   const handleRequestPermission = () => {
-    // UI-only stub
     setNotificationPermission("granted");
     toast({ title: "Permission granted", description: "Browser notifications enabled." });
     // BACKEND_TODO: real permission + SW push
   };
 
-  const handleCopyDiagnostics = async () => {
-    const devNavValue = import.meta.env.VITE_ENABLE_DEV_NAV ?? "undefined";
-    const diagnostics = `App Version: 0.1.0
-VITE_ENABLE_DEV_NAV: ${devNavValue}
-User Agent: ${navigator.userAgent}`;
+  const handleExportSettings = () => {
+    settingsStore.exportSettings();
+    toast({ title: "Settings exported", description: "Settings file downloaded." });
+  };
 
-    try {
-      await navigator.clipboard.writeText(diagnostics);
-      setCopiedDiagnostics(true);
-      toast({ title: "Copied", description: "Diagnostics copied to clipboard." });
-      setTimeout(() => setCopiedDiagnostics(false), 2000);
-    } catch {
-      toast({ title: "Failed to copy", description: "Could not copy to clipboard.", variant: "destructive" });
+  const handleImportSettings = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string;
+        const result = settingsStore.importSettings(content);
+        if (result.success) {
+          toast({ title: "Settings imported", description: "Settings applied successfully." });
+        } else {
+          toast({ title: "Import failed", description: result.error || "Invalid settings file.", variant: "destructive" });
+        }
+      } catch {
+        toast({ title: "Import failed", description: "Could not read file.", variant: "destructive" });
+      }
+    };
+    reader.readAsText(file);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
     }
   };
 
-  const handleResetLocalData = () => {
-    // Clear specified localStorage keys
-    localStorage.removeItem(STORAGE_KEYS.recentSearches);
-    localStorage.removeItem(STORAGE_KEYS.recentMarkets);
-    localStorage.removeItem(STORAGE_KEYS.oracleRead);
-    localStorage.removeItem(STORAGE_KEYS.alerts);
-    localStorage.removeItem(STORAGE_KEYS.theme);
-    localStorage.removeItem(STORAGE_KEYS.watchlist);
-
-    // Reset local state
-    setTheme("dark");
-    setReduceMotion(false);
-    setCompactMode(false);
-
-    setResetDialogOpen(false);
-    toast({ title: "Reset complete", description: "Local data has been cleared." });
-    // BACKEND_TODO: account reset vs local reset
+  const handleResetDefaults = () => {
+    settingsStore.resetToDefaults();
+    setResetDefaultsDialogOpen(false);
+    toast({ title: "Reset complete", description: "Settings reset to defaults." });
   };
+
+  const handleResetCounters = () => {
+    usageStore.resetCounters();
+    setResetCountersDialogOpen(false);
+    toast({ title: "Counters reset", description: "Usage counters have been cleared." });
+  };
+
+  const handleApplyTierDefaults = () => {
+    settingsStore.applyTierDefaults();
+    toast({ title: "Tier defaults applied", description: "All budgets reset to tier defaults." });
+  };
+
+  const handleCopyDiagnostics = () => {
+    const diagnostics = usageStore.exportDiagnostics();
+    navigator.clipboard.writeText(diagnostics);
+    toast({ title: "Copied", description: "Diagnostics copied to clipboard." });
+  };
+
+  const handleExportMetrics = () => {
+    const diagnostics = usageStore.exportDiagnostics();
+    const blob = new Blob([diagnostics], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `sparkfined-metrics-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast({ title: "Exported", description: "Metrics file downloaded." });
+  };
+
+  // Path-based update for nested settings
+  const handlePathUpdate = (path: string, value: boolean | number | string) => {
+    const parts = path.split('.');
+    const settings = settingsStore.settings as unknown as Record<string, unknown>;
+    
+    if (parts.length === 2) {
+      const [section, key] = parts;
+      const currentSection = settings[section] as Record<string, unknown> || {};
+      settingsStore.updateSettings({
+        [section]: {
+          ...currentSection,
+          [key]: value,
+        },
+      });
+    } else if (parts.length === 3) {
+      const [section, subsection, key] = parts;
+      const currentSection = settings[section] as Record<string, unknown> || {};
+      const currentSubsection = currentSection[subsection] as Record<string, unknown> || {};
+      settingsStore.updateSettings({
+        [section]: {
+          ...currentSection,
+          [subsection]: {
+            ...currentSubsection,
+            [key]: value,
+          },
+        },
+      });
+    }
+  };
+
+  const handleThrottleChange = (field: 'maxCallsPerMinute' | 'maxConcurrentCalls', value: number) => {
+    settingsStore.updateSettings({
+      tier: {
+        ...settingsStore.settings.tier,
+        [field]: value,
+        customThrottles: true,
+      },
+    });
+  };
+
+  // Action bar
+  const ActionBar = () => (
+    <div className="flex flex-wrap items-center gap-2">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={handleExportSettings}
+        data-testid="btn-export-settings"
+      >
+        <Download className="mr-2 h-4 w-4" />
+        Export
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => fileInputRef.current?.click()}
+        data-testid="btn-import-settings"
+      >
+        <Upload className="mr-2 h-4 w-4" />
+        Import
+      </Button>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".json"
+        className="hidden"
+        onChange={handleImportSettings}
+      />
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => setResetDefaultsDialogOpen(true)}
+        data-testid="btn-reset-defaults"
+      >
+        <RotateCcw className="mr-2 h-4 w-4" />
+        Reset defaults
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => setResetCountersDialogOpen(true)}
+        data-testid="btn-reset-counters"
+      >
+        <RefreshCw className="mr-2 h-4 w-4" />
+        Reset counters
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={handleApplyTierDefaults}
+        data-testid="btn-apply-tier-defaults"
+      >
+        Apply tier defaults
+      </Button>
+    </div>
+  );
 
   // Connection Section
   const ConnectionSection = () => (
@@ -187,15 +290,23 @@ User Agent: ${navigator.userAgent}`;
       </SettingsRow>
       <SettingsRow label="Reduce motion" description="Minimize animations throughout the app">
         <Switch
-          checked={reduceMotion}
-          onCheckedChange={setReduceMotion}
+          checked={settingsStore.settings.ui.reduceMotion}
+          onCheckedChange={(checked) => 
+            settingsStore.updateSettings({
+              ui: { ...settingsStore.settings.ui, reduceMotion: checked }
+            })
+          }
           aria-label="Reduce motion"
         />
       </SettingsRow>
       <SettingsRow label="Compact mode" description="Use tighter spacing for more content">
         <Switch
-          checked={compactMode}
-          onCheckedChange={setCompactMode}
+          checked={settingsStore.settings.ui.compactMode}
+          onCheckedChange={(checked) => 
+            settingsStore.updateSettings({
+              ui: { ...settingsStore.settings.ui, compactMode: checked }
+            })
+          }
           aria-label="Compact mode"
         />
       </SettingsRow>
@@ -253,68 +364,6 @@ User Agent: ${navigator.userAgent}`;
     </div>
   );
 
-  // Developer Section
-  const DeveloperSection = () => {
-    const devNavValue = import.meta.env.VITE_ENABLE_DEV_NAV ?? "undefined";
-
-    return (
-      <div className="space-y-4">
-        <SettingsRow
-          label="Developer navigation"
-          description="Handbook link visibility is controlled by environment variable"
-        >
-          <Badge variant="secondary" className="font-mono text-xs">
-            VITE_ENABLE_DEV_NAV: {String(devNavValue)}
-          </Badge>
-        </SettingsRow>
-        <div className="pt-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleCopyDiagnostics}
-            className="gap-2"
-          >
-            {copiedDiagnostics ? (
-              <>
-                <Check className="h-4 w-4" />
-                Copied
-              </>
-            ) : (
-              <>
-                <Copy className="h-4 w-4" />
-                Copy diagnostics
-              </>
-            )}
-          </Button>
-        </div>
-      </div>
-    );
-  };
-
-  // Danger Zone Section
-  const DangerZoneSection = () => (
-    <div className="space-y-3">
-      <p className="text-sm text-muted-foreground">
-        This will clear all locally stored data including recent searches, read states, and preferences.
-      </p>
-      <Button
-        variant="outline"
-        className="border-destructive/50 text-destructive hover:bg-destructive/10"
-        onClick={() => setResetDialogOpen(true)}
-      >
-        <AlertTriangle className="mr-2 h-4 w-4" />
-        Reset local data
-      </Button>
-    </div>
-  );
-
-  const sections = [
-    { id: "connection", title: "Connection", description: "Wallet connection status", content: <ConnectionSection /> },
-    { id: "preferences", title: "App Preferences", description: "Theme and display settings", content: <AppPreferencesSection /> },
-    { id: "notifications", title: "Notifications", description: "Alert and notification settings", content: <NotificationsSection /> },
-    { id: "developer", title: "Developer / Advanced", description: "Diagnostics and developer options", content: <DeveloperSection /> },
-  ];
-
   // Loading state
   if (pageState.state === "loading") {
     return (
@@ -328,8 +377,11 @@ User Agent: ${navigator.userAgent}`;
   if (pageState.state === "error") {
     return (
       <PageContainer testId="page-settings">
-        <SettingsHeader />
-        <div className="mt-6">
+        <div className="space-y-6">
+          <div className="flex flex-col gap-1">
+            <h1 className="text-2xl font-bold text-foreground">Settings</h1>
+            <p className="text-sm text-muted-foreground">Control Center • Tier • Budgets • Counters</p>
+          </div>
           <ErrorBanner
             message="Failed to load settings"
             onRetry={() => {
@@ -346,58 +398,246 @@ User Agent: ${navigator.userAgent}`;
   return (
     <PageContainer testId="page-settings">
       <div className="space-y-6">
-        <SettingsHeader />
+        {/* Header with action bar */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex flex-col gap-1">
+            <h1 className="text-2xl font-bold text-foreground">Settings</h1>
+            <p className="text-sm text-muted-foreground">Control Center • Tier • Budgets • Counters</p>
+          </div>
+          {!isMobile && <ActionBar />}
+        </div>
 
-        {isMobile ? (
+        {/* Mobile action bar */}
+        {isMobile && (
+          <div className="overflow-x-auto pb-2">
+            <ActionBar />
+          </div>
+        )}
+
+        {/* Desktop: 2-column layout */}
+        {!isMobile ? (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Left column: Primary sections */}
+            <div className="space-y-4">
+              {/* Tier & Budgets */}
+              <TierBudgetsSection
+                settings={settingsStore.settings}
+                usedToday={usedToday}
+                onTierChange={settingsStore.updateTier}
+                onBudgetChange={settingsStore.updateBudget}
+                onToggleCustom={settingsStore.toggleBudgetCustom}
+                onThrottleChange={handleThrottleChange}
+                isEditable={settingsStore.isEditable}
+              />
+
+              {/* Usage & Counters */}
+              <UsageCountersSection
+                usage={usageStore.usage}
+                totalCallsToday={usageStore.totalCallsToday}
+                totalErrorsToday={usageStore.totalErrorsToday}
+                totalCacheHits={usageStore.totalCacheHits}
+                overallAvgLatency={usageStore.overallAvgLatency}
+                onResetCounters={() => setResetCountersDialogOpen(true)}
+                onCopyDiagnostics={handleCopyDiagnostics}
+              />
+
+              {/* Connection */}
+              <SettingsSectionCard title="Connection" description="Wallet connection status">
+                <ConnectionSection />
+              </SettingsSectionCard>
+
+              {/* App Preferences */}
+              <SettingsSectionCard title="App Preferences" description="Theme and display settings">
+                <AppPreferencesSection />
+              </SettingsSectionCard>
+
+              {/* Notifications */}
+              <SettingsSectionCard title="Notifications" description="Alert and notification settings">
+                <NotificationsSection />
+              </SettingsSectionCard>
+            </div>
+
+            {/* Right column: Advanced sections */}
+            <div className="space-y-4">
+              {/* Provider Params */}
+              <ProviderParamsSection
+                settings={settingsStore.settings}
+                isEditable={settingsStore.isEditable}
+                onUpdate={handlePathUpdate}
+              />
+
+              {/* Cache & Offline */}
+              <CacheOfflineSection
+                settings={settingsStore.settings}
+                onUpdate={handlePathUpdate}
+              />
+
+              {/* Push & Alerts */}
+              <PushAlertsSection
+                settings={settingsStore.settings}
+                onUpdate={handlePathUpdate}
+              />
+
+              {/* Privacy & Diagnostics */}
+              <PrivacyDiagnosticsSection
+                settings={settingsStore.settings}
+                onUpdate={handlePathUpdate}
+                onExportSettings={handleExportSettings}
+                onExportMetrics={handleExportMetrics}
+              />
+            </div>
+          </div>
+        ) : (
           // Mobile: Accordion layout
           <Accordion type="single" collapsible className="space-y-2">
-            {sections.map((section) => (
-              <AccordionItem key={section.id} value={section.id} className="border rounded-lg px-4">
-                <AccordionTrigger className="hover:no-underline">
-                  <div className="text-left">
-                    <div className="font-medium">{section.title}</div>
-                    <div className="text-xs text-muted-foreground">{section.description}</div>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent className="space-y-4 pt-2">
-                  {section.content}
-                </AccordionContent>
-              </AccordionItem>
-            ))}
-            {/* Danger zone accordion item */}
-            <AccordionItem value="danger" className="border border-destructive/50 rounded-lg px-4 bg-destructive/5">
+            {/* Tier & Budgets */}
+            <AccordionItem value="tier-budgets" className="border rounded-lg px-4">
               <AccordionTrigger className="hover:no-underline">
                 <div className="text-left">
-                  <div className="font-medium text-destructive">Danger Zone</div>
-                  <div className="text-xs text-muted-foreground">Reset local data</div>
+                  <div className="font-medium">Tier & Budgets</div>
+                  <div className="text-xs text-muted-foreground">API limits and usage quotas</div>
                 </div>
               </AccordionTrigger>
-              <AccordionContent className="pt-2">
-                <DangerZoneSection />
+              <AccordionContent className="pt-2 pb-4">
+                <TierBudgetsSection
+                  settings={settingsStore.settings}
+                  usedToday={usedToday}
+                  onTierChange={settingsStore.updateTier}
+                  onBudgetChange={settingsStore.updateBudget}
+                  onToggleCustom={settingsStore.toggleBudgetCustom}
+                  onThrottleChange={handleThrottleChange}
+                  isEditable={settingsStore.isEditable}
+                />
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Usage & Counters */}
+            <AccordionItem value="usage-counters" className="border rounded-lg px-4">
+              <AccordionTrigger className="hover:no-underline">
+                <div className="text-left">
+                  <div className="font-medium">Usage & Counters</div>
+                  <div className="text-xs text-muted-foreground">API call statistics</div>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="pt-2 pb-4">
+                <UsageCountersSection
+                  usage={usageStore.usage}
+                  totalCallsToday={usageStore.totalCallsToday}
+                  totalErrorsToday={usageStore.totalErrorsToday}
+                  totalCacheHits={usageStore.totalCacheHits}
+                  overallAvgLatency={usageStore.overallAvgLatency}
+                  onResetCounters={() => setResetCountersDialogOpen(true)}
+                  onCopyDiagnostics={handleCopyDiagnostics}
+                />
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Connection */}
+            <AccordionItem value="connection" className="border rounded-lg px-4">
+              <AccordionTrigger className="hover:no-underline">
+                <div className="text-left">
+                  <div className="font-medium">Connection</div>
+                  <div className="text-xs text-muted-foreground">Wallet connection status</div>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="pt-2 pb-4">
+                <ConnectionSection />
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* App Preferences */}
+            <AccordionItem value="preferences" className="border rounded-lg px-4">
+              <AccordionTrigger className="hover:no-underline">
+                <div className="text-left">
+                  <div className="font-medium">App Preferences</div>
+                  <div className="text-xs text-muted-foreground">Theme and display settings</div>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="pt-2 pb-4">
+                <AppPreferencesSection />
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Notifications */}
+            <AccordionItem value="notifications" className="border rounded-lg px-4">
+              <AccordionTrigger className="hover:no-underline">
+                <div className="text-left">
+                  <div className="font-medium">Notifications</div>
+                  <div className="text-xs text-muted-foreground">Alert and notification settings</div>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="pt-2 pb-4">
+                <NotificationsSection />
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Provider Params */}
+            <AccordionItem value="provider-params" className="border rounded-lg px-4">
+              <AccordionTrigger className="hover:no-underline">
+                <div className="text-left">
+                  <div className="font-medium">Provider Params</div>
+                  <div className="text-xs text-muted-foreground">AI model configuration</div>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="pt-2 pb-4">
+                <ProviderParamsSection
+                  settings={settingsStore.settings}
+                  isEditable={settingsStore.isEditable}
+                  onUpdate={handlePathUpdate}
+                />
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Cache & Offline */}
+            <AccordionItem value="cache-offline" className="border rounded-lg px-4">
+              <AccordionTrigger className="hover:no-underline">
+                <div className="text-left">
+                  <div className="font-medium">Cache & Offline</div>
+                  <div className="text-xs text-muted-foreground">Data persistence settings</div>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="pt-2 pb-4">
+                <CacheOfflineSection
+                  settings={settingsStore.settings}
+                  onUpdate={handlePathUpdate}
+                />
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Push & Alerts */}
+            <AccordionItem value="push-alerts" className="border rounded-lg px-4">
+              <AccordionTrigger className="hover:no-underline">
+                <div className="text-left">
+                  <div className="font-medium">Push & Alerts</div>
+                  <div className="text-xs text-muted-foreground">Push notification settings</div>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="pt-2 pb-4">
+                <PushAlertsSection
+                  settings={settingsStore.settings}
+                  onUpdate={handlePathUpdate}
+                />
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Privacy & Diagnostics */}
+            <AccordionItem value="privacy-diagnostics" className="border rounded-lg px-4">
+              <AccordionTrigger className="hover:no-underline">
+                <div className="text-left">
+                  <div className="font-medium">Privacy & Diagnostics</div>
+                  <div className="text-xs text-muted-foreground">Data handling and debug options</div>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="pt-2 pb-4">
+                <PrivacyDiagnosticsSection
+                  settings={settingsStore.settings}
+                  onUpdate={handlePathUpdate}
+                  onExportSettings={handleExportSettings}
+                  onExportMetrics={handleExportMetrics}
+                />
               </AccordionContent>
             </AccordionItem>
           </Accordion>
-        ) : (
-          // Desktop: Card stack layout
-          <div className="space-y-4">
-            {sections.map((section) => (
-              <SettingsSectionCard
-                key={section.id}
-                title={section.title}
-                description={section.description}
-              >
-                {section.content}
-              </SettingsSectionCard>
-            ))}
-            {/* Danger zone card */}
-            <SettingsSectionCard
-              title="Danger Zone"
-              description="Reset local data"
-              variant="danger"
-            >
-              <DangerZoneSection />
-            </SettingsSectionCard>
-          </div>
         )}
       </div>
 
@@ -421,20 +661,40 @@ User Agent: ${navigator.userAgent}`;
         </DialogContent>
       </Dialog>
 
-      {/* Reset local data confirmation dialog */}
-      <Dialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
+      {/* Reset defaults confirmation dialog */}
+      <Dialog open={resetDefaultsDialogOpen} onOpenChange={setResetDefaultsDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="text-destructive">Reset local data?</DialogTitle>
+            <DialogTitle className="text-destructive">Reset to defaults?</DialogTitle>
             <DialogDescription>
-              This will clear all locally stored data including recent searches, Oracle read states, alerts, and theme preferences. This action cannot be undone.
+              This will reset all settings to their default values for your current tier. Custom budget overrides will be cleared.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setResetDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setResetDefaultsDialogOpen(false)}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleResetLocalData}>
+            <Button variant="destructive" onClick={handleResetDefaults}>
+              Reset
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset counters confirmation dialog */}
+      <Dialog open={resetCountersDialogOpen} onOpenChange={setResetCountersDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reset usage counters?</DialogTitle>
+            <DialogDescription>
+              This will clear all usage statistics including call counts, errors, and latency data. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setResetCountersDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleResetCounters}>
               Reset
             </Button>
           </DialogFooter>
