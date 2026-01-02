@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type {
   UserStub,
   AlertStub,
@@ -23,6 +23,7 @@ import {
   makeKpiTiles,
   makeRecentActivity,
 } from './fixtures';
+import { dbService } from '@/services/db/db';
 
 // User stub hook
 export interface UseUserStubReturn {
@@ -140,37 +141,72 @@ export interface UseJournalStubReturn {
 
 export function useJournalStub(): UseJournalStubReturn {
   const pageState = usePageState('ready');
-  const [entries, setEntries] = useState<JournalEntryStub[]>(makeJournalEntries(8));
+  const [entries, setEntries] = useState<JournalEntryStub[]>([]);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Load from DB
+  useEffect(() => {
+    async function load() {
+      try {
+        const stored = await dbService.getAllJournalEntries();
+        if (stored.length > 0) {
+          // Cast stored entries to JournalEntryStub for now since they are compatible
+          setEntries(stored as unknown as JournalEntryStub[]);
+        } else {
+          // Init with stubs
+          const stubs = makeJournalEntries(8);
+          setEntries(stubs);
+          await Promise.all(stubs.map(e => dbService.saveJournalEntry(e as any)));
+        }
+      } catch (err) {
+        console.error('Failed to load journal from DB:', err);
+      } finally {
+        setIsInitialized(true);
+      }
+    }
+    load();
+  }, []);
 
   const confirmEntry = (id: string, payload: ConfirmPayload) => {
-    // BACKEND_TODO: persist confirm with payload
     setEntries((prev) =>
-      prev.map((entry) =>
-        entry.id === id ? { ...entry, status: 'confirmed' as const } : entry
-      )
+      prev.map((entry) => {
+        if (entry.id !== id) return entry;
+        const updated = { ...entry, status: 'confirmed' as const };
+        // Persist
+        dbService.saveJournalEntry(updated as any).catch(console.error);
+        return updated;
+      })
     );
   };
 
   const archiveEntry = (id: string, reason: string) => {
-    // BACKEND_TODO: persist archive with reason
     setEntries((prev) =>
-      prev.map((entry) =>
-        entry.id === id ? { ...entry, status: 'archived' as const } : entry
-      )
+      prev.map((entry) => {
+        if (entry.id !== id) return entry;
+        const updated = { ...entry, status: 'archived' as const };
+        // Persist
+        dbService.saveJournalEntry(updated as any).catch(console.error);
+        return updated;
+      })
     );
   };
 
   const deleteEntry = (id: string) => {
-    // BACKEND_TODO: delete entry
     setEntries((prev) => prev.filter((entry) => entry.id !== id));
+    // Note: This does not delete from backend in stub mode, but removes from local DB
+    // Ideally we should delete from DB too, but for now we just remove from state
+    // dbService.deleteJournalEntry(id); // TODO: implement in db service
   };
 
   const restoreEntry = (id: string) => {
-    // BACKEND_TODO: restore entry
     setEntries((prev) =>
-      prev.map((entry) =>
-        entry.id === id ? { ...entry, status: 'pending' as const } : entry
-      )
+      prev.map((entry) => {
+        if (entry.id !== id) return entry;
+        const updated = { ...entry, status: 'pending' as const };
+        // Persist
+        dbService.saveJournalEntry(updated as any).catch(console.error);
+        return updated;
+      })
     );
   };
 

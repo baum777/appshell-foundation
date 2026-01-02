@@ -29,7 +29,8 @@ export default createHandler({
     // Support both 'view' and 'status' query params
     const status = query.view || query.status;
     
-    const result = await journalList(status, query.limit, query.cursor);
+    // userId is now REQUIRED for all journal operations (multitenancy)
+    const result = await journalList(userId, status, query.limit, query.cursor);
     
     setCacheHeaders(res, { noStore: true });
     
@@ -47,7 +48,8 @@ export default createHandler({
     const body = validateBody(journalCreateRequestSchema, req.body);
     const idempotencyKey = getIdempotencyKey(req);
     
-    const entry = await journalCreate(body, idempotencyKey);
+    // userId is now REQUIRED for all journal operations (multitenancy)
+    const entry = await journalCreate(userId, body, idempotencyKey);
     
     setCacheHeaders(res, { noStore: true });
     sendCreated(res, entry);

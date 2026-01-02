@@ -6,6 +6,12 @@ import "./index.css";
 const ENABLE_SW_POLLING = import.meta.env.VITE_ENABLE_SW_POLLING === "true";
 
 async function registerServiceWorker(): Promise<void> {
+  // In dev/test the file `/sw.js` may not be served with a valid JS MIME type.
+  // Register only for production builds.
+  if (!import.meta.env.PROD) {
+    return;
+  }
+
   if (!('serviceWorker' in navigator)) {
     console.log('[App] Service Worker not supported');
     return;

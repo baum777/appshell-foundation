@@ -30,9 +30,15 @@ export const kvKeys = {
   // Idempotency
   idempotency: (scope: string, key: string) => `${KV_PREFIX}idem:${scope}:${key}`,
   
-  // Journal
-  journalEntry: (entryId: string) => `${KV_PREFIX}journal:entry:${entryId}`,
-  journalIndex: () => `${KV_PREFIX}journal:index`,
+  // Journal (userId-scoped - MULTITENANT)
+  // Schema: sf:v1:journal:{userId}:entry:{id}
+  journalEntry: (userId: string, id: string) => `${KV_PREFIX}journal:${userId}:entry:${id}`,
+  // Schema: sf:v1:journal:{userId}:day:{YYYY-MM-DD}:ids
+  journalDayIds: (userId: string, dayKey: string) => `${KV_PREFIX}journal:${userId}:day:${dayKey}:ids`,
+  // Schema: sf:v1:journal:{userId}:status:{STATUS}:ids
+  journalStatusIds: (userId: string, status: string) => `${KV_PREFIX}journal:${userId}:status:${status}:ids`,
+  // Schema: sf:v1:journal:{userId}:index:updatedAt
+  journalUpdatedAt: (userId: string) => `${KV_PREFIX}journal:${userId}:index:updatedAt`,
   
   // Oracle
   oracleSnapshot: (date: string) => `${KV_PREFIX}oracle:snapshot:${date}`,

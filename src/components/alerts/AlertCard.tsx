@@ -207,7 +207,7 @@ export function AlertCard({
   };
 
   const handleOpenChart = () => {
-    navigate(`/chart?query=${encodeURIComponent(alert.symbolOrAddress)}`);
+    navigate(`/chart?q=${encodeURIComponent(alert.symbolOrAddress)}`);
   };
 
   const createdAtText = formatDistanceToNow(new Date(alert.createdAt), {

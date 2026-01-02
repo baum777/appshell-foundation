@@ -145,7 +145,7 @@ export function GlobalSearchBar() {
       setQuery("");
 
       // BACKEND_TODO: resolve query -> token/mint and route to chart with symbol/address params
-      navigate(`/chart?query=${encodeURIComponent(value)}`);
+      navigate(`/chart?q=${encodeURIComponent(value)}`);
     },
     [query, navigate]
   );

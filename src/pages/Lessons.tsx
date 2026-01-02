@@ -96,7 +96,7 @@ export default function Lessons() {
   // Loading state
   if (pageState.state === "loading") {
     return (
-      <PageContainer testId="page-lessons">
+      <PageContainer testId="page-learn">
         <LearnSkeleton />
       </PageContainer>
     );
@@ -105,7 +105,7 @@ export default function Lessons() {
   // Error state
   if (pageState.state === "error") {
     return (
-      <PageContainer testId="page-lessons">
+      <PageContainer testId="page-learn">
         <div className="space-y-6">
           <LearnHeader unlockedCount={0} totalCount={0} />
           <ErrorBanner
@@ -123,7 +123,7 @@ export default function Lessons() {
   // Empty state (no lessons at all)
   if (pageState.state === "empty" || lessons.length === 0) {
     return (
-      <PageContainer testId="page-lessons">
+      <PageContainer testId="page-learn">
         <div className="space-y-6">
           <LearnHeader unlockedCount={0} totalCount={0} />
           <LearnEmptyState
@@ -140,7 +140,7 @@ export default function Lessons() {
 
   // Ready state
   return (
-    <PageContainer testId="page-lessons">
+    <PageContainer testId="page-learn">
       <div className="space-y-6">
         <LearnHeader unlockedCount={unlockedCount} totalCount={lessons.length} />
 

@@ -31,7 +31,8 @@ export function handleJournalList(req: ParsedRequest, res: ServerResponse): void
   // Support both 'view' and 'status' query params
   const status = query.view || query.status;
   
-  const result = journalList(status, query.limit, query.cursor);
+  // userId is now REQUIRED for all journal operations (multitenancy)
+  const result = journalList(req.userId, status, query.limit, query.cursor);
   
   setCacheHeaders(res, { noStore: true });
   
@@ -46,7 +47,8 @@ export function handleJournalList(req: ParsedRequest, res: ServerResponse): void
 export function handleJournalGetById(req: ParsedRequest, res: ServerResponse): void {
   const { id } = req.params;
   
-  const entry = journalGetById(id);
+  // userId is now REQUIRED for all journal operations (multitenancy)
+  const entry = journalGetById(req.userId, id);
   
   if (!entry) {
     throw notFound(`Journal entry not found: ${id}`, ErrorCodes.JOURNAL_NOT_FOUND);
@@ -62,7 +64,8 @@ export function handleJournalCreate(req: ParsedRequest, res: ServerResponse): vo
   // Check for idempotency key
   const idempotencyKey = req.query['idempotency-key'] as string | undefined;
   
-  const entry = journalCreate(body, idempotencyKey);
+  // userId is now REQUIRED for all journal operations (multitenancy)
+  const entry = journalCreate(req.userId, body, idempotencyKey);
   
   setCacheHeaders(res, { noStore: true });
   sendCreated(res, entry);
@@ -72,21 +75,22 @@ export function handleJournalConfirm(req: ParsedRequest, res: ServerResponse): v
   const { id } = req.params;
   const payload = validateBody(journalConfirmPayloadSchema, req.body);
   
+  // userId is now REQUIRED for all journal operations (multitenancy)
   // First check if entry exists
-  const existing = journalGetById(id);
+  const existing = journalGetById(req.userId, id);
   if (!existing) {
     throw notFound(`Journal entry not found: ${id}`, ErrorCodes.JOURNAL_NOT_FOUND);
   }
   
   // Check for invalid state (can't confirm archived)
-  if (existing.status === 'archived') {
+  if (existing.status === 'ARCHIVED') {
     throw conflict(
       'Cannot confirm an archived entry',
       ErrorCodes.JOURNAL_INVALID_STATE
     );
   }
   
-  const entry = journalConfirm(id, payload);
+  const entry = journalConfirm(req.userId, id, payload);
   
   setCacheHeaders(res, { noStore: true });
   sendJson(res, entry);
@@ -96,12 +100,13 @@ export function handleJournalArchive(req: ParsedRequest, res: ServerResponse): v
   const { id } = req.params;
   const body = validateBody(journalArchiveRequestSchema, req.body);
   
-  const existing = journalGetById(id);
+  // userId is now REQUIRED for all journal operations (multitenancy)
+  const existing = journalGetById(req.userId, id);
   if (!existing) {
     throw notFound(`Journal entry not found: ${id}`, ErrorCodes.JOURNAL_NOT_FOUND);
   }
   
-  const entry = journalArchive(id, body.reason);
+  const entry = journalArchive(req.userId, id, body.reason);
   
   setCacheHeaders(res, { noStore: true });
   sendJson(res, entry);
@@ -110,12 +115,13 @@ export function handleJournalArchive(req: ParsedRequest, res: ServerResponse): v
 export function handleJournalRestore(req: ParsedRequest, res: ServerResponse): void {
   const { id } = req.params;
   
-  const existing = journalGetById(id);
+  // userId is now REQUIRED for all journal operations (multitenancy)
+  const existing = journalGetById(req.userId, id);
   if (!existing) {
     throw notFound(`Journal entry not found: ${id}`, ErrorCodes.JOURNAL_NOT_FOUND);
   }
   
-  const entry = journalRestore(id);
+  const entry = journalRestore(req.userId, id);
   
   setCacheHeaders(res, { noStore: true });
   sendJson(res, entry);
@@ -124,7 +130,8 @@ export function handleJournalRestore(req: ParsedRequest, res: ServerResponse): v
 export function handleJournalDelete(req: ParsedRequest, res: ServerResponse): void {
   const { id } = req.params;
   
-  const deleted = journalDelete(id);
+  // userId is now REQUIRED for all journal operations (multitenancy)
+  const deleted = journalDelete(req.userId, id);
   
   if (!deleted) {
     throw notFound(`Journal entry not found: ${id}`, ErrorCodes.JOURNAL_NOT_FOUND);

@@ -15,7 +15,8 @@ export default createHandler({
     
     const id = req.query.id as string;
     
-    const entry = await journalGetById(id);
+    // userId is now REQUIRED for all journal operations (multitenancy)
+    const entry = await journalGetById(userId, id);
     
     if (!entry) {
       throw notFound(`Journal entry not found: ${id}`, ErrorCodes.JOURNAL_NOT_FOUND);
@@ -30,7 +31,8 @@ export default createHandler({
     
     const id = req.query.id as string;
     
-    const deleted = await journalDelete(id);
+    // userId is now REQUIRED for all journal operations (multitenancy)
+    const deleted = await journalDelete(userId, id);
     
     if (!deleted) {
       throw notFound(`Journal entry not found: ${id}`, ErrorCodes.JOURNAL_NOT_FOUND);

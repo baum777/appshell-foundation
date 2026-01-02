@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Select,
   SelectContent,
@@ -18,6 +19,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { WifiOff } from "lucide-react";
+import { useOffline } from "@/components/offline/OfflineContext";
 
 export interface CreateEntryPayload {
   side: "BUY" | "SELL" | "neutral";
@@ -36,12 +39,13 @@ export function JournalCreateDialog({
   onClose,
   onCreate,
 }: JournalCreateDialogProps) {
+  const { isOnline } = useOffline();
   const [side, setSide] = useState<"BUY" | "SELL" | "neutral">("neutral");
   const [summary, setSummary] = useState("");
   const [tagsInput, setTagsInput] = useState("");
 
   const handleCreate = () => {
-    if (!summary.trim()) return;
+    if (!summary.trim() || !isOnline) return;
 
     const tags = tagsInput
       .split(",")
@@ -110,11 +114,20 @@ export function JournalCreateDialog({
           </div>
         </div>
 
+        {!isOnline && (
+          <Alert variant="destructive" className="mb-4">
+            <WifiOff className="h-4 w-4" />
+            <AlertDescription>
+              You are offline. Create action is disabled.
+            </AlertDescription>
+          </Alert>
+        )}
+
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={handleCreate} disabled={!summary.trim()}>
+          <Button onClick={handleCreate} disabled={!summary.trim() || !isOnline}>
             Save Entry
           </Button>
         </DialogFooter>

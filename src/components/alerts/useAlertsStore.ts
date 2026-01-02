@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { usePageState, type UsePageStateReturn } from '@/stubs/pageState';
+import { dbService } from '@/services/db/db';
 import {
   type Alert,
   type SimpleAlert,
@@ -15,31 +16,6 @@ import {
   TEMPLATE_INDICATORS,
   DEFAULT_DEAD_TOKEN_PARAMS,
 } from './types';
-
-// ─────────────────────────────────────────────────────────────
-// LOCALSTORAGE PERSISTENCE
-// ─────────────────────────────────────────────────────────────
-
-const STORAGE_KEY = 'sparkfined_alerts_v1';
-
-function loadAlerts(): Alert[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveAlerts(alerts: Alert[]): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(alerts));
-  } catch {
-    // ignore
-  }
-}
 
 // ─────────────────────────────────────────────────────────────
 // STUB DATA GENERATORS
@@ -192,16 +168,31 @@ export interface UseAlertsStoreReturn {
 
 export function useAlertsStore(): UseAlertsStoreReturn {
   const pageState = usePageState('ready');
-  const [alerts, setAlerts] = useState<Alert[]>(() => {
-    const stored = loadAlerts();
-    return stored.length > 0 ? stored : generateStubAlerts();
-  });
+  const [alerts, setAlerts] = useState<Alert[]>([]);
   const [filter, setFilter] = useState<AlertStatusFilter>('all');
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  // Persist on change
+  // Load from DB on mount
   useEffect(() => {
-    saveAlerts(alerts);
-  }, [alerts]);
+    async function load() {
+      try {
+        const stored = await dbService.getAllAlerts();
+        if (stored.length > 0) {
+          setAlerts(stored);
+        } else {
+          // Initialize with stubs if empty
+          const stubs = generateStubAlerts();
+          setAlerts(stubs);
+          await Promise.all(stubs.map(a => dbService.saveAlert(a)));
+        }
+      } catch (err) {
+        console.error('Failed to load alerts from DB:', err);
+      } finally {
+        setIsInitialized(true);
+      }
+    }
+    load();
+  }, []);
 
   // Filtered alerts
   const filteredAlerts = useMemo(() => {
@@ -236,8 +227,11 @@ export function useAlertsStore(): UseAlertsStoreReturn {
       note: params.note,
       createdAt: new Date().toISOString(),
     };
-    // BACKEND_TODO: persist + register worker job
+    
+    // Update State
     setAlerts((prev) => [newAlert, ...prev]);
+    // Persist to DB
+    dbService.saveAlert(newAlert).catch(console.error);
   }, []);
 
   const createTwoStageAlert = useCallback((params: CreateTwoStageParams) => {
@@ -265,8 +259,9 @@ export function useAlertsStore(): UseAlertsStoreReturn {
       createdAt: new Date().toISOString(),
       expiresAt: new Date(Date.now() + params.expiryMinutes * 60000).toISOString(),
     };
-    // BACKEND_TODO: SW updates indicators + stage transitions
+    
     setAlerts((prev) => [newAlert, ...prev]);
+    dbService.saveAlert(newAlert).catch(console.error);
   }, []);
 
   const createDeadTokenAlert = useCallback((params: CreateDeadTokenParams) => {
@@ -283,12 +278,14 @@ export function useAlertsStore(): UseAlertsStoreReturn {
       note: params.note,
       createdAt: new Date().toISOString(),
     };
-    // BACKEND_TODO: backend arms deadness + SW session engine
+    
     setAlerts((prev) => [newAlert, ...prev]);
+    dbService.saveAlert(newAlert).catch(console.error);
   }, []);
 
   const deleteAlert = useCallback((id: string) => {
     setAlerts((prev) => prev.filter((a) => a.id !== id));
+    dbService.deleteAlert(id).catch(console.error);
   }, []);
 
   const togglePause = useCallback((id: string) => {
@@ -296,11 +293,14 @@ export function useAlertsStore(): UseAlertsStoreReturn {
       prev.map((alert) => {
         if (alert.id !== id) return alert;
         const newEnabled = !alert.enabled;
-        return {
+        const updated = {
           ...alert,
           enabled: newEnabled,
           status: newEnabled ? 'active' : 'paused',
         } as Alert;
+        
+        dbService.saveAlert(updated).catch(console.error);
+        return updated;
       })
     );
   }, []);
@@ -309,12 +309,15 @@ export function useAlertsStore(): UseAlertsStoreReturn {
     setAlerts((prev) =>
       prev.map((alert) => {
         if (alert.id !== id) return alert;
-        return {
+        const updated = {
           ...alert,
           stage: 'CANCELLED',
           enabled: false,
           status: 'paused',
         } as Alert;
+        
+        dbService.saveAlert(updated).catch(console.error);
+        return updated;
       })
     );
   }, []);
@@ -360,7 +363,6 @@ export function useAlertsStore(): UseAlertsStoreReturn {
       if (!isNaN(parsed)) data.cooldownMinutes = parsed;
     }
 
-    // BACKEND_TODO: schema validation
     return data;
   }, []);
 
