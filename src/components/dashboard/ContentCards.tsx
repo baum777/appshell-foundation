@@ -28,21 +28,37 @@ export function DailyBiasCard() {
     refetch();
   }, [refetch]);
 
-  // Loading state
+  // Loading state with animated skeleton
   if (isLoading && !data) {
     return (
-      <Card data-testid="daily-bias-card" className="bg-card/50 border-border/50">
+      <Card data-testid="daily-bias-card" className="bg-card/50 border-border/50 animate-fade-in">
         <CardHeader className="pb-2 sm:pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground uppercase tracking-wide">
               Daily Bias
             </CardTitle>
+            <Skeleton className="h-8 w-8 rounded-md" />
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
-          <Skeleton className="h-12 w-full" />
-          <Skeleton className="h-4 w-3/4" />
-          <Skeleton className="h-8 w-full" />
+          {/* Title skeleton */}
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-5 w-32" style={{ animationDelay: '0ms' }} />
+            <div className="flex gap-2">
+              <Skeleton className="h-5 w-16 rounded-full" style={{ animationDelay: '50ms' }} />
+              <Skeleton className="h-5 w-14 rounded-full" style={{ animationDelay: '100ms' }} />
+            </div>
+          </div>
+          {/* Description skeleton */}
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-full" style={{ animationDelay: '150ms' }} />
+            <Skeleton className="h-4 w-2/3" style={{ animationDelay: '200ms' }} />
+          </div>
+          {/* Footer skeleton */}
+          <div className="flex items-center justify-between pt-1">
+            <Skeleton className="h-4 w-20" style={{ animationDelay: '250ms' }} />
+            <Skeleton className="h-2 w-24 rounded-full" style={{ animationDelay: '300ms' }} />
+          </div>
         </CardContent>
       </Card>
     );
