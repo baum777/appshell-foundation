@@ -176,6 +176,7 @@ async function runCritic(input: {
   insight: JsonObject;
   timeoutMs: number;
   model: string;
+  userId?: string;
 }): Promise<{ report: InsightCriticReport; modelUsed: string }> {
   const env = getEnv();
   const schemaJson = criticOutputSchemaJson();
@@ -195,7 +196,7 @@ async function runCritic(input: {
       timeoutMs: input.timeoutMs,
       jsonOnly: true,
       system: 'You are a critical insight reviewer. Return strictly valid JSON.',
-    });
+    }, { userId: input.userId });
 
     const report = insightCriticReportSchema.parse(result.parsed);
     return { report, modelUsed: result.model };
@@ -270,7 +271,7 @@ export async function runReasoning(
             timeoutMs,
             jsonOnly: true,
             system: 'You are a deep reasoning engine. Output valid JSON only.',
-        });
+        }, { userId: req.userId });
         
         const parsed = result.parsed;
 
@@ -289,6 +290,7 @@ export async function runReasoning(
       insight: insight as unknown as JsonObject,
       timeoutMs: 15000,
       model,
+      userId: req.userId,
     });
 
     const finalInsight = {
@@ -368,6 +370,7 @@ export async function runInsightCritic(
       insight: body.insight,
       timeoutMs: 15000,
       model,
+      userId: req.userId,
     });
 
     const payload = insightCriticOnlyResultSchema.parse({

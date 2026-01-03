@@ -1,5 +1,6 @@
 import { getEnv } from '../config/env.js';
-import type { LLMRequest, LLMResponse } from '../routes/reasoning/types.js';
+import type { LLMRequest, LLMResponse, LLMUseCase } from '../routes/reasoning/types.js';
+import { usageTracker } from '../lib/usage/usageTracker.js';
 
 function parseFirstJsonObject(text: string): unknown {
   const trimmed = text.trim();
@@ -17,8 +18,10 @@ function parseFirstJsonObject(text: string): unknown {
   throw new Error('No JSON object found in model output');
 }
 
-export async function callOpenAI(request: LLMRequest): Promise<LLMResponse> {
+export async function callOpenAI(request: LLMRequest, context?: { useCase: LLMUseCase }): Promise<LLMResponse> {
   const env = getEnv();
+  const start = Date.now();
+
   if (!env.OPENAI_API_KEY) {
     throw new Error('OPENAI_API_KEY not configured');
   }
@@ -69,6 +72,7 @@ export async function callOpenAI(request: LLMRequest): Promise<LLMResponse> {
 
     const json = JSON.parse(text) as any;
     const rawText = json?.choices?.[0]?.message?.content;
+    
     if (typeof rawText !== 'string') {
       throw new Error('OpenAI response missing message.content');
     }
@@ -78,13 +82,30 @@ export async function callOpenAI(request: LLMRequest): Promise<LLMResponse> {
       parsed = parseFirstJsonObject(rawText);
     }
 
+    if (context) {
+        const end = Date.now();
+        await usageTracker.recordCall('openai', context.useCase, end);
+        await usageTracker.recordLatency('openai', context.useCase, end - start, end);
+        
+        const usage = json.usage;
+        if (usage) {
+            await usageTracker.recordTokens('openai', context.useCase, usage.prompt_tokens, usage.completion_tokens, end);
+        } else {
+            await usageTracker.recordTokens('openai', context.useCase, null, null, end);
+        }
+    }
+
     return {
       model: request.model,
       rawText,
       parsed,
     };
+  } catch (error) {
+    if (context) {
+        await usageTracker.recordError('openai', context.useCase, Date.now());
+    }
+    throw error;
   } finally {
     clearTimeout(timeout);
   }
 }
-

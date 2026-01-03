@@ -1,14 +1,9 @@
 import { getEnv } from '../config/env.js';
-import type { LLMRequest, LLMResponse } from '../routes/reasoning/types.js';
+import type { LLMRequest, LLMResponse, LLMUseCase } from '../routes/reasoning/types.js';
+import { usageTracker } from '../lib/usage/usageTracker.js';
 
 function parseFirstJsonObject(text: string): unknown {
   const trimmed = text.trim();
-  // Simple check for code block wrapping common in deepseek
-  const jsonBlock = trimmed.match(/```json\s*([\s\S]*?)\s*```/);
-  if (jsonBlock) {
-    return JSON.parse(jsonBlock[1]);
-  }
-
   if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
     return JSON.parse(trimmed);
   }
@@ -23,8 +18,10 @@ function parseFirstJsonObject(text: string): unknown {
   throw new Error('No JSON object found in model output');
 }
 
-export async function callDeepSeek(request: LLMRequest): Promise<LLMResponse> {
+export async function callDeepSeek(request: LLMRequest, context?: { useCase: LLMUseCase }): Promise<LLMResponse> {
   const env = getEnv();
+  const start = Date.now();
+
   if (!env.DEEPSEEK_API_KEY) {
     throw new Error('MISSING_DEEPSEEK_KEY');
   }
@@ -75,6 +72,7 @@ export async function callDeepSeek(request: LLMRequest): Promise<LLMResponse> {
 
     const json = JSON.parse(text) as any;
     const rawText = json?.choices?.[0]?.message?.content;
+    
     if (typeof rawText !== 'string') {
       throw new Error('DeepSeek response missing message.content');
     }
@@ -84,13 +82,30 @@ export async function callDeepSeek(request: LLMRequest): Promise<LLMResponse> {
       parsed = parseFirstJsonObject(rawText);
     }
 
+    if (context) {
+        const end = Date.now();
+        await usageTracker.recordCall('deepseek', context.useCase, end);
+        await usageTracker.recordLatency('deepseek', context.useCase, end - start, end);
+        
+        const usage = json.usage;
+        if (usage) {
+             await usageTracker.recordTokens('deepseek', context.useCase, usage.prompt_tokens, usage.completion_tokens, end);
+        } else {
+             await usageTracker.recordTokens('deepseek', context.useCase, null, null, end);
+        }
+    }
+
     return {
       model: request.model,
       rawText,
       parsed,
     };
+  } catch (error) {
+    if (context) {
+        await usageTracker.recordError('deepseek', context.useCase, Date.now());
+    }
+    throw error;
   } finally {
     clearTimeout(timeout);
   }
 }
-

@@ -28,6 +28,7 @@ import {
   handleGrokPulseHistory,
   handleGrokPulseMeta,
   handleGrokPulseRun,
+  handleUsageSummary,
 } from './routes/index.js';
 
 /**
@@ -41,6 +42,7 @@ export function createApp(): Router {
   // Health & Meta
   router.get('/health', handleHealth);
   router.get('/meta', handleMeta);
+  router.get('/usage/summary', handleUsageSummary);
   
   // Journal Routes
   router.get('/journal', handleJournalList);
