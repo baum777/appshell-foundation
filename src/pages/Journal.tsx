@@ -3,14 +3,15 @@ import { useSearchParams } from "react-router-dom";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { useJournalStub, type ConfirmPayload } from "@/stubs/hooks";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, RefreshCw, X } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { AlertCircle, RefreshCw, X, Plus, Search, Clock } from "lucide-react";
 import { toast } from "sonner";
+import { useOffline } from "@/components/offline/OfflineContext";
 import {
   WalletGuard,
-  JournalHeader,
   JournalSegmentedControl,
-  JournalSearchBar,
   JournalEntryRow,
   JournalConfirmModal,
   JournalCreateDialog,
@@ -18,21 +19,28 @@ import {
   JournalDeleteDialog,
   JournalEmptyState,
   JournalSkeleton,
-  
-  JournalDiaryView,
-  JournalPendingBanner,
   JournalReviewOverlay,
+  JournalModeToggle,
+  JournalSyncBadge,
+  JournalTimelineView,
+  JournalInboxView,
+  JournalLearnView,
+  getStoredJournalMode,
+  type JournalMode,
   type JournalView,
-  type JournalViewMode,
   type CreateEntryPayload,
+  type ReflectionData,
+  type SyncStatus,
 } from "@/components/journal";
 import type { JournalEntryStub } from "@/stubs/contracts";
+import { getQueue, getSyncErrors } from "@/services/journal/journalQueue";
 
-// localStorage key for view mode persistence
+// localStorage key for view mode persistence (legacy)
 const VIEW_MODE_KEY = "journalViewMode";
 
 export default function Journal() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { isOnline } = useOffline();
   const {
     pageState,
     entries,
@@ -46,15 +54,14 @@ export default function Journal() {
   // Wallet guard state (stub) - default to true for demo
   const [isWalletConnected, setIsWalletConnected] = useState(true);
 
-  // View state
-  const [activeView, setActiveView] = useState<JournalView>("pending");
-  const [searchQuery, setSearchQuery] = useState("");
+  // Journal v3 mode state
+  const [mode, setMode] = useState<JournalMode>(getStoredJournalMode);
   
-  // View mode (List/Diary) with localStorage persistence
-  const [viewMode, setViewMode] = useState<JournalViewMode>(() => {
-    const stored = localStorage.getItem(VIEW_MODE_KEY);
-    return (stored === "diary" || stored === "list") ? stored : "list";
-  });
+  // Search state
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Legacy view state (for v2 compatibility)
+  const [activeView, setActiveView] = useState<JournalView>("pending");
 
   // Dialog states
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -72,6 +79,17 @@ export default function Journal() {
   const entryRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const urlProcessedRef = useRef(false);
 
+  // Sync state
+  const [syncErrors, setSyncErrors] = useState<Set<string>>(new Set());
+  const queueCount = getQueue().length;
+  
+  const syncStatus: SyncStatus = useMemo(() => {
+    if (!isOnline) return "offline";
+    if (syncErrors.size > 0) return "error";
+    if (queueCount > 0) return "queued";
+    return "synced";
+  }, [isOnline, syncErrors.size, queueCount]);
+
   // Counts for segments
   const counts = useMemo(() => ({
     pending: entries.filter((e) => e.status === "pending").length,
@@ -86,11 +104,10 @@ export default function Journal() {
     [entries]
   );
 
-  // Filter entries by view and search
-  const filteredEntries = useMemo(() => {
-    let result = entries.filter((e) => e.status === activeView);
+  // Filter entries for timeline (confirmed + pending)
+  const timelineEntries = useMemo(() => {
+    let result = entries.filter((e) => e.status === "pending" || e.status === "confirmed");
 
-    // Apply search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       result = result.filter(
@@ -100,29 +117,13 @@ export default function Journal() {
       );
     }
 
-    // Sort pending entries by "expiring first" (UI-only: by timestamp)
-    if (activeView === "pending") {
-      result = [...result].sort(
-        (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-      );
-    }
-
     return result;
-  }, [entries, activeView, searchQuery]);
+  }, [entries, searchQuery]);
 
-  // Entries for diary view (show pending+confirmed in those segments, archived only when viewing archived)
-  const diaryEntries = useMemo(() => {
-    if (activeView === "archived") {
-      return entries.filter((e) => e.status === "archived");
-    }
-    // For pending/confirmed segments, show both pending and confirmed
-    return entries.filter((e) => e.status === "pending" || e.status === "confirmed");
-  }, [entries, activeView]);
-
-  // Persist view mode to localStorage
+  // Update sync errors on mount
   useEffect(() => {
-    localStorage.setItem(VIEW_MODE_KEY, viewMode);
-  }, [viewMode]);
+    setSyncErrors(getSyncErrors());
+  }, []);
 
   // Handle URL ?view= sync on initial load
   useEffect(() => {
@@ -149,7 +150,6 @@ export default function Journal() {
     const entryId = searchParams.get("entry");
     if (!entryId) return;
 
-    // Find the entry
     const entry = entries.find((e) => e.id === entryId);
     if (!entry) {
       setEntryNotFound(entryId);
@@ -159,7 +159,6 @@ export default function Journal() {
     urlProcessedRef.current = true;
     setEntryNotFound(null);
 
-    // Switch to correct segment if needed
     if (entry.status !== activeView) {
       setActiveView(entry.status);
       const newParams = new URLSearchParams(searchParams);
@@ -167,28 +166,24 @@ export default function Journal() {
       setSearchParams(newParams, { replace: true });
     }
 
-    // Set highlight and scroll after a brief delay to allow render
     setTimeout(() => {
       setHighlightedEntryId(entryId);
       const ref = entryRefs.current.get(entryId);
       if (ref) {
         ref.scrollIntoView({ behavior: "smooth", block: "center" });
       }
-
-      // Remove highlight after 1.5 seconds
       setTimeout(() => {
         setHighlightedEntryId(null);
       }, 1500);
     }, 100);
   }, [entries, searchParams, activeView, setSearchParams]);
 
-  // Handle row click - update URL with entry param
+  // Handle row click
   const handleRowClick = useCallback((id: string) => {
     const newParams = new URLSearchParams(searchParams);
     newParams.set("entry", id);
     setSearchParams(newParams, { replace: true });
 
-    // Highlight the clicked entry
     setHighlightedEntryId(id);
     setTimeout(() => {
       setHighlightedEntryId(null);
@@ -214,7 +209,6 @@ export default function Journal() {
     };
     setEntries((prev) => [newEntry, ...prev]);
     toast.success("Entry logged");
-    // BACKEND_TODO: persist entry + auto-capture + AI enrich
   }, [setEntries]);
 
   // Handlers
@@ -222,7 +216,6 @@ export default function Journal() {
     confirmEntry(id, payload);
     toast.success("Confirmed");
 
-    // Clear selection if confirming the selected entry
     const entryParam = searchParams.get("entry");
     if (entryParam === id) {
       const newParams = new URLSearchParams(searchParams);
@@ -240,7 +233,6 @@ export default function Journal() {
       },
     });
 
-    // Clear selection if archiving the selected entry
     const entryParam = searchParams.get("entry");
     if (entryParam === id) {
       const newParams = new URLSearchParams(searchParams);
@@ -253,7 +245,6 @@ export default function Journal() {
     deleteEntry(id);
     toast.success("Entry deleted");
 
-    // Clear selection if deleting the selected entry
     const entryParam = searchParams.get("entry");
     if (entryParam === id) {
       const newParams = new URLSearchParams(searchParams);
@@ -315,19 +306,73 @@ export default function Journal() {
     setConfirmModalEntry(entry);
   }, []);
 
-  // Diary card click handler
-  const handleDiaryCardClick = useCallback((entry: JournalEntryStub, index: number) => {
+  // Timeline card click handler
+  const handleTimelineCardClick = useCallback((entry: JournalEntryStub, index: number) => {
     if (entry.status === "pending") {
-      // Find index in pending entries
       const pendingIndex = pendingEntries.findIndex((e) => e.id === entry.id);
       if (pendingIndex !== -1) {
         handleOpenReviewOverlay(pendingIndex);
       }
     } else {
-      // For non-pending entries, just highlight
       handleRowClick(entry.id);
     }
   }, [pendingEntries, handleOpenReviewOverlay, handleRowClick]);
+
+  // Inbox handlers
+  const handleInboxConfirm = useCallback((id: string) => {
+    confirmEntry(id, { mood: "", note: "", tags: [] });
+    toast.success("Confirmed");
+  }, [confirmEntry]);
+
+  const handleInboxArchive = useCallback((id: string) => {
+    archiveEntry(id, "");
+    toast.success("Archived", {
+      action: {
+        label: "Undo",
+        onClick: () => restoreEntry(id),
+      },
+    });
+  }, [archiveEntry, restoreEntry]);
+
+  const handleInboxSaveNote = useCallback((id: string, reflection: ReflectionData) => {
+    // BACKEND_HOOK: Save reflection without confirming
+    toast.success("Note saved");
+  }, []);
+
+  const handleInboxConfirmWithNote = useCallback((id: string, reflection: ReflectionData) => {
+    confirmEntry(id, { mood: reflection.feeling, note: reflection.reasoning, tags: [] });
+    toast.success("Confirmed with note");
+  }, [confirmEntry]);
+
+  // Keyboard shortcuts for Inbox mode
+  useEffect(() => {
+    if (mode !== "inbox") return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only when not in an input
+      if (
+        document.activeElement?.tagName === "INPUT" ||
+        document.activeElement?.tagName === "TEXTAREA"
+      ) {
+        return;
+      }
+
+      if (e.key === "j" || e.key === "J") {
+        // Focus next card
+      } else if (e.key === "k" || e.key === "K") {
+        // Focus prev card
+      } else if (e.key === "c" || e.key === "C") {
+        // Confirm focused
+      } else if (e.key === "a" || e.key === "A") {
+        // Archive focused
+      } else if (e.key === "n" || e.key === "N") {
+        // Add note
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [mode]);
 
   // Loading state
   if (pageState.isLoading) {
@@ -364,22 +409,82 @@ export default function Journal() {
     );
   }
 
-  // Empty state (no entries at all)
   const isCompletelyEmpty = entries.length === 0;
-
-  // Determine if search returned no results
-  const isSearchEmpty = searchQuery.trim() && filteredEntries.length === 0;
 
   return (
     <PageContainer testId="page-journal">
       <WalletGuard isConnected={isWalletConnected} onDemoMode={handleDemoMode}>
         <div className="space-y-6">
-          <JournalHeader 
-            entries={entries} 
-            onLogEntry={handleOpenCreateDialog} 
-            viewMode={viewMode}
-            onViewModeChange={setViewMode}
-          />
+          {/* Header */}
+          <div className="flex flex-col gap-4">
+            {/* Top row: Title + Mode toggle + CTA */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <h1 className="text-2xl font-bold tracking-tight text-foreground">
+                  Journal
+                </h1>
+                <JournalModeToggle
+                  value={mode}
+                  onChange={setMode}
+                  pendingCount={counts.pending}
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  data-testid="journal-cta-new-diary"
+                  onClick={handleOpenCreateDialog}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Diary Entry
+                </Button>
+              </div>
+            </div>
+
+            {/* Sub-row: Search + Sync + Quick review CTA */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <div className="relative flex-1 max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  data-testid="journal-search"
+                  placeholder="Search entries..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+
+              <div className="flex items-center gap-3">
+                <JournalSyncBadge
+                  status={syncStatus}
+                  queueCount={queueCount}
+                  onRetry={() => toast.info("Retrying...")}
+                />
+
+                {counts.pending > 0 && (
+                  <Badge
+                    data-testid="journal-pending-count"
+                    variant="secondary"
+                    className="text-xs gap-1 text-amber-500"
+                  >
+                    <Clock className="h-3 w-3" />
+                    {counts.pending} pending
+                  </Badge>
+                )}
+
+                {counts.pending > 0 && counts.pending <= 5 && (
+                  <Button
+                    data-testid="journal-cta-review-3min"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleOpenReviewOverlay(0)}
+                  >
+                    3-min review
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
 
           {/* Entry not found alert */}
           {entryNotFound && (
@@ -395,81 +500,48 @@ export default function Journal() {
             </Alert>
           )}
 
-          {/* Pending review banner */}
-          {pendingEntries.length > 0 && (
-            <JournalPendingBanner
-              pendingCount={pendingEntries.length}
-              onReviewNow={() => handleOpenReviewOverlay(0)}
-            />
-          )}
-
           {isCompletelyEmpty ? (
             <JournalEmptyState type="all" onLogEntry={handleOpenCreateDialog} />
           ) : (
             <>
-              <JournalSegmentedControl
-                value={activeView}
-                onChange={handleViewChange}
-                counts={counts}
-              />
-
-              <JournalSearchBar value={searchQuery} onChange={setSearchQuery} />
-
-              {isSearchEmpty ? (
-                <JournalEmptyState 
-                  type="search" 
-                  onClearSearch={() => setSearchQuery("")} 
+              {/* Mode-specific content */}
+              {mode === "timeline" && (
+                <JournalTimelineView
+                  entries={timelineEntries}
+                  onCardClick={handleTimelineCardClick}
+                  onEdit={(entry) => setConfirmModalEntry(entry)}
+                  onArchive={(id) => handleArchive(id, "")}
+                  onAddReflection={(entry) => {
+                    // Open mini reflection for this entry
+                    const idx = pendingEntries.findIndex((e) => e.id === entry.id);
+                    if (idx !== -1) {
+                      handleOpenReviewOverlay(idx);
+                    }
+                  }}
                 />
-              ) : filteredEntries.length === 0 && viewMode === "list" ? (
-                <JournalEmptyState 
-                  type="segment" 
-                  segmentName={activeView} 
-                  onLogEntry={handleOpenCreateDialog}
+              )}
+
+              {mode === "inbox" && (
+                <JournalInboxView
+                  pendingEntries={pendingEntries}
+                  onConfirm={handleInboxConfirm}
+                  onArchive={handleInboxArchive}
+                  onSaveNote={handleInboxSaveNote}
+                  onConfirmWithNote={handleInboxConfirmWithNote}
+                  onGoToTimeline={() => setMode("timeline")}
+                  syncErrors={syncErrors}
                 />
-              ) : viewMode === "diary" ? (
-                // Diary view
-                diaryEntries.length === 0 ? (
-                  <JournalEmptyState 
-                    type="segment" 
-                    segmentName={activeView} 
-                    onLogEntry={handleOpenCreateDialog}
-                  />
-                ) : (
-                  <JournalDiaryView
-                    entries={diaryEntries}
-                    activeSegment={activeView}
-                    onCardClick={handleDiaryCardClick}
-                  />
-                )
-              ) : (
-                // List view (existing behavior)
-                <div className="space-y-3">
-                  {filteredEntries.map((entry) => (
-                    <JournalEntryRow
-                      key={entry.id}
-                      ref={(el) => setEntryRef(entry.id, el)}
-                      entry={entry}
-                      isHighlighted={entry.id === highlightedEntryId}
-                      onRowClick={handleRowClick}
-                      onConfirm={
-                        entry.status === "pending"
-                          ? () => setConfirmModalEntry(entry)
-                          : undefined
-                      }
-                      onArchive={
-                        entry.status === "pending" || entry.status === "confirmed"
-                          ? () => setArchiveDialogEntry(entry)
-                          : undefined
-                      }
-                      onDelete={() => setDeleteDialogEntry(entry)}
-                      onRestore={
-                        entry.status === "archived"
-                          ? () => handleRestore(entry.id)
-                          : undefined
-                      }
-                    />
-                  ))}
-                </div>
+              )}
+
+              {mode === "learn" && (
+                <JournalLearnView
+                  onStartReview={() => handleOpenReviewOverlay(0)}
+                  onShowEvidence={(type, index) => {
+                    // Switch to timeline with filter
+                    setMode("timeline");
+                    toast.info(`Showing ${type} evidence`);
+                  }}
+                />
               )}
             </>
           )}

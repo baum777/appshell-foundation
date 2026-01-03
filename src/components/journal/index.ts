@@ -15,3 +15,15 @@ export { JournalMomentCard } from './JournalMomentCard';
 export { JournalPendingBanner } from './JournalPendingBanner';
 export { JournalReviewOverlay } from './JournalReviewOverlay';
 export { JournalInsightCard } from './JournalInsightCard';
+
+// Journal v3 components
+export { JournalModeToggle, getStoredJournalMode, setStoredJournalMode, type JournalMode } from './JournalModeToggle';
+export { JournalSyncBadge, type SyncStatus } from './JournalSyncBadge';
+export { JournalInboxCard } from './JournalInboxCard';
+export { JournalInboxView } from './JournalInboxView';
+export { JournalMiniReflection, type ReflectionData } from './JournalMiniReflection';
+export { JournalLearnView } from './JournalLearnView';
+export { JournalTimelineView } from './JournalTimelineView';
+export { JournalTradeCard } from './JournalTradeCard';
+export { JournalDiaryCard } from './JournalDiaryCard';
+export { JournalInsightTimelineCard } from './JournalInsightTimelineCard';
