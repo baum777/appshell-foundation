@@ -66,16 +66,39 @@ export function ChartFeedPanel({ assetId }: ChartFeedPanelProps) {
     refetch();
   }, [refetch]);
 
-  // Loading skeleton
+  // Loading skeleton with staggered animation
   if (isLoading && !data) {
     return (
-      <div data-testid="chart-feed-panel" className="space-y-3">
+      <div data-testid="chart-feed-panel" className="space-y-3 animate-fade-in">
         <div className="flex items-center justify-between">
           <FeedToggle value={mode} onChange={setMode} />
         </div>
         <div data-testid="chart-feed-list" className="space-y-3">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-32 w-full rounded-lg" />
+          {[0, 1, 2].map((i) => (
+            <div 
+              key={i} 
+              className="rounded-lg border border-border/50 bg-card/50 p-4 space-y-3 animate-fade-in"
+              style={{ animationDelay: `${i * 100}ms`, animationFillMode: 'backwards' }}
+            >
+              {/* Header skeleton */}
+              <div className="flex items-center justify-between">
+                <Skeleton className="h-5 w-32 animate-pulse" />
+                <div className="flex gap-2">
+                  <Skeleton className="h-5 w-16 rounded-full animate-pulse" style={{ animationDelay: `${i * 100 + 50}ms` }} />
+                  <Skeleton className="h-5 w-14 rounded-full animate-pulse" style={{ animationDelay: `${i * 100 + 100}ms` }} />
+                </div>
+              </div>
+              {/* Description skeleton */}
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-full animate-pulse" style={{ animationDelay: `${i * 100 + 150}ms` }} />
+                <Skeleton className="h-4 w-3/4 animate-pulse" style={{ animationDelay: `${i * 100 + 200}ms` }} />
+              </div>
+              {/* Footer skeleton */}
+              <div className="flex items-center justify-between pt-2">
+                <Skeleton className="h-4 w-20 animate-pulse" style={{ animationDelay: `${i * 100 + 250}ms` }} />
+                <Skeleton className="h-2 w-24 rounded-full animate-pulse" style={{ animationDelay: `${i * 100 + 300}ms` }} />
+              </div>
+            </div>
           ))}
         </div>
       </div>
