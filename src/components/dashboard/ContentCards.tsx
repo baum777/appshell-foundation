@@ -136,11 +136,38 @@ export function DailyBiasCard() {
 
 export function HoldingsCard() {
   // BACKEND_TODO: Fetch holdings data from backend
+  const isLoading = false; // Replace with actual loading state
+  
   const holdings = [
     { symbol: 'BTC', amount: '0.00', value: '$0.00' },
     { symbol: 'ETH', amount: '0.00', value: '$0.00' },
     { symbol: 'SOL', amount: '0.00', value: '$0.00' },
   ];
+
+  if (isLoading) {
+    return (
+      <Card className="bg-card/50 border-border/50 animate-fade-in">
+        <CardHeader className="pb-2 sm:pb-3">
+          <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground uppercase tracking-wide">
+            Holdings
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2.5 sm:space-y-3">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="flex items-center justify-between" style={{ animationDelay: `${i * 100}ms` }}>
+                <Skeleton className="h-5 w-12" style={{ animationDelay: `${i * 100}ms` }} />
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-5 w-16" style={{ animationDelay: `${i * 100 + 50}ms` }} />
+                  <Skeleton className="h-4 w-14" style={{ animationDelay: `${i * 100 + 100}ms` }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="bg-card/50 border-border/50">
@@ -151,8 +178,12 @@ export function HoldingsCard() {
       </CardHeader>
       <CardContent>
         <div className="space-y-2.5 sm:space-y-3">
-          {holdings.map((holding) => (
-            <div key={holding.symbol} className="flex items-center justify-between">
+          {holdings.map((holding, i) => (
+            <div 
+              key={holding.symbol} 
+              className="flex items-center justify-between animate-fade-in"
+              style={{ animationDelay: `${i * 50}ms`, animationFillMode: 'backwards' }}
+            >
               <span className="text-sm font-medium text-foreground">{holding.symbol}</span>
               <div className="text-right">
                 <span className="text-sm text-foreground">{holding.amount}</span>
@@ -168,10 +199,37 @@ export function HoldingsCard() {
 
 export function LastTradesCard() {
   // BACKEND_TODO: Fetch recent trades from backend
+  const isLoading = false; // Replace with actual loading state
+  
   const trades = [
     { symbol: 'BTC', side: 'LONG' as const, pnl: '+2.4R' },
     { symbol: 'ETH', side: 'SHORT' as const, pnl: '-0.5R' },
   ];
+
+  if (isLoading) {
+    return (
+      <Card className="bg-card/50 border-border/50 animate-fade-in">
+        <CardHeader className="pb-2 sm:pb-3">
+          <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground uppercase tracking-wide">
+            Last Trades
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2.5 sm:space-y-3">
+            {[0, 1].map((i) => (
+              <div key={i} className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-5 w-14 rounded-full" style={{ animationDelay: `${i * 100}ms` }} />
+                  <Skeleton className="h-5 w-10" style={{ animationDelay: `${i * 100 + 50}ms` }} />
+                </div>
+                <Skeleton className="h-5 w-12" style={{ animationDelay: `${i * 100 + 100}ms` }} />
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="bg-card/50 border-border/50">
@@ -183,11 +241,15 @@ export function LastTradesCard() {
       <CardContent>
         <div className="space-y-2.5 sm:space-y-3">
           {trades.map((trade, i) => (
-            <div key={i} className="flex items-center justify-between">
+            <div 
+              key={i} 
+              className="flex items-center justify-between animate-fade-in"
+              style={{ animationDelay: `${i * 50}ms`, animationFillMode: 'backwards' }}
+            >
               <div className="flex items-center gap-2">
                 <Badge 
                   variant={trade.side === 'LONG' ? 'default' : 'secondary'} 
-                  className="text-xs"
+                  className="text-xs transition-transform duration-200 hover:scale-105"
                 >
                   {trade.side}
                 </Badge>
