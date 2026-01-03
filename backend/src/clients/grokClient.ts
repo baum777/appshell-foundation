@@ -1,5 +1,6 @@
-import type { LLMRequest, LLMResponse } from '../routes/reasoning/types.js';
+import type { LLMRequest, LLMResponse, LLMUseCase } from '../routes/reasoning/types.js';
 import { getEnv } from '../config/env.js';
+import { usageTracker } from '../lib/usage/usageTracker.js';
 
 function parseFirstJsonObject(text: string): unknown {
   const trimmed = text.trim();
@@ -22,9 +23,10 @@ function parseFirstJsonObject(text: string): unknown {
   throw new Error('No JSON object found in Grok output');
 }
 
-export async function callGrok(request: LLMRequest): Promise<LLMResponse> {
+export async function callGrok(request: LLMRequest, context?: { useCase: LLMUseCase }): Promise<LLMResponse> {
   const env = getEnv();
   const apiKey = env.GROK_API_KEY;
+  const start = Date.now();
   
   if (!apiKey) {
     throw new Error('MISSING_GROK_KEY');
@@ -89,11 +91,29 @@ export async function callGrok(request: LLMRequest): Promise<LLMResponse> {
       parsed = parseFirstJsonObject(rawText);
     }
 
+    if (context) {
+        const end = Date.now();
+        await usageTracker.recordCall('grok', context.useCase, end);
+        await usageTracker.recordLatency('grok', context.useCase, end - start, end);
+        
+        const usage = json.usage;
+        if (usage) {
+             await usageTracker.recordTokens('grok', context.useCase, usage.prompt_tokens, usage.completion_tokens, end);
+        } else {
+             await usageTracker.recordTokens('grok', context.useCase, null, null, end);
+        }
+    }
+
     return {
       model: body.model,
       rawText,
       parsed,
     };
+  } catch (error) {
+    if (context) {
+        await usageTracker.recordError('grok', context.useCase, Date.now());
+    }
+    throw error;
   } finally {
     clearTimeout(timeout);
   }

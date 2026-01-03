@@ -3,44 +3,95 @@ import type { LLMUseCase, LLMRequest, LLMResponse } from '../routes/reasoning/ty
 import { callOpenAI } from './openaiClient.js';
 import { callDeepSeek } from './deepseekClient.js';
 import { callGrok } from './grokClient.js';
+import { checkRateLimit } from '../lib/rateLimit/limiter.js';
+import { checkAndConsumeBudget, releaseConcurrency } from '../lib/budget/budgetGate.js';
+import { getUserSettings } from '../lib/budget/settings.js';
+import { AppError, ErrorCodes } from '../http/error.js';
 
 export async function routeLLMRequest(
   useCase: LLMUseCase,
-  request: Omit<LLMRequest, 'model'> & { model?: string }
+  request: Omit<LLMRequest, 'model'> & { model?: string },
+  context?: { userId?: string, ip?: string }
 ): Promise<LLMResponse> {
   const env = getEnv();
-  const baseRequest: LLMRequest = {
-    ...request,
-    model: request.model || 'gpt-4o-mini', // default placeholder, overridden below
-  };
+  const userId = context?.userId || 'anon';
+  
+  // 1. Rate Limit
+  const rlResult = await checkRateLimit(context?.ip, userId);
+  if (!rlResult.allowed) {
+      throw new AppError(rlResult.reason || 'Rate limit exceeded', 429, ErrorCodes.RATE_LIMITED);
+  }
 
+  // 2. Budget Gate
+  const settings = await getUserSettings(userId);
+  
+  let provider: 'openai' | 'deepseek' | 'grok';
   switch (useCase) {
     case 'journal':
-      baseRequest.model = request.model || env.OPENAI_MODEL_JOURNAL || 'gpt-4o-mini';
-      return callOpenAI(baseRequest);
-      
     case 'insights':
-      baseRequest.model = request.model || env.OPENAI_MODEL_INSIGHTS || 'gpt-4o-mini';
-      return callOpenAI(baseRequest);
-      
     case 'charts':
-      baseRequest.model = request.model || env.OPENAI_MODEL_CHARTS || 'gpt-4o-mini';
-      return callOpenAI(baseRequest);
-      
+      provider = 'openai';
+      break;
     case 'reasoning':
     case 'reasoning_critic':
-      // Enforce DeepSeek
-      if (!env.DEEPSEEK_API_KEY) {
-        throw new Error('MISSING_DEEPSEEK_KEY');
-      }
-      baseRequest.model = request.model || env.DEEPSEEK_MODEL_REASONING || env.OPUS_MODEL || 'deepseek-reasoner';
-      return callDeepSeek(baseRequest);
-      
+      provider = 'deepseek';
+      break;
     case 'grok_pulse':
-      return callGrok(baseRequest);
-      
+      provider = 'grok';
+      break;
     default:
-      throw new Error(`Unknown use-case: ${useCase}`);
+       throw new AppError(`Unknown use-case: ${useCase}`, 400, ErrorCodes.VALIDATION_FAILED);
+  }
+
+  const budgetResult = await checkAndConsumeBudget({
+      provider,
+      useCase,
+      userId,
+      ip: context?.ip,
+      now: Date.now(),
+      settings
+  });
+
+  if (!budgetResult.allowed) {
+      // Using 429 for budget exceeded as it's a form of rate limiting/quota
+      throw new AppError(budgetResult.reason || 'Budget exceeded', 429, ErrorCodes.BUDGET_EXCEEDED);
+  }
+  
+  const baseRequest: LLMRequest = {
+    ...request,
+    model: request.model || 'gpt-4o-mini', 
+  };
+
+  try {
+    switch (useCase) {
+      case 'journal':
+        baseRequest.model = request.model || env.OPENAI_MODEL_JOURNAL || 'gpt-4o-mini';
+        return await callOpenAI(baseRequest, { useCase });
+        
+      case 'insights':
+        baseRequest.model = request.model || env.OPENAI_MODEL_INSIGHTS || 'gpt-4o-mini';
+        return await callOpenAI(baseRequest, { useCase });
+        
+      case 'charts':
+        baseRequest.model = request.model || env.OPENAI_MODEL_CHARTS || 'gpt-4o-mini';
+        return await callOpenAI(baseRequest, { useCase });
+        
+      case 'reasoning':
+      case 'reasoning_critic':
+        if (!env.DEEPSEEK_API_KEY) {
+           throw new AppError('DeepSeek API key missing', 500, ErrorCodes.INTERNAL_ERROR);
+        }
+        baseRequest.model = request.model || env.DEEPSEEK_MODEL_REASONING || env.OPUS_MODEL || 'deepseek-reasoner';
+        return await callDeepSeek(baseRequest, { useCase });
+        
+      case 'grok_pulse':
+        return await callGrok(baseRequest, { useCase });
+        
+      default:
+        throw new AppError(`Unknown use-case: ${useCase}`, 400, ErrorCodes.VALIDATION_FAILED);
+    }
+  } finally {
+      // 6. Release Concurrency
+      await releaseConcurrency(userId);
   }
 }
-
