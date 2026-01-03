@@ -16,12 +16,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import {
   ChevronLeft,
   ChevronRight,
-  X,
   TrendingUp,
   TrendingDown,
   Check,
@@ -33,6 +31,7 @@ import {
 import { format } from "date-fns";
 import type { JournalEntryStub } from "@/stubs/contracts";
 import { cn } from "@/lib/utils";
+import { JournalInsightCard } from "./JournalInsightCard";
 
 interface JournalReviewOverlayProps {
   isOpen: boolean;
@@ -243,7 +242,10 @@ export function JournalReviewOverlay({
           </div>
         </div>
 
-        {/* Section 2: Complete it checklist */}
+        {/* Section 2: AI Insight */}
+        <JournalInsightCard entry={currentEntry} />
+
+        {/* Section 3: Complete it checklist */}
         <div className="space-y-3">
           <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
             Complete it
