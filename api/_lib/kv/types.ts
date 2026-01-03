@@ -111,5 +111,6 @@ export interface KVStore {
   delete(key: string): Promise<boolean>;
   getByPrefix<T>(prefix: string): Promise<Array<{ key: string; value: T }>>;
   exists(key: string): Promise<boolean>;
-  incr(key: string, ttlSeconds?: number): Promise<number>;
+  // Updated to support increment amount
+  incr(key: string, amount?: number, ttlSeconds?: number): Promise<number>;
 }

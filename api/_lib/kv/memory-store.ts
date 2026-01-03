@@ -84,7 +84,7 @@ export const memoryKVStore: KVStore = {
     return true;
   },
 
-  async incr(key: string, ttlSeconds?: number): Promise<number> {
+  async incr(key: string, amount: number = 1, ttlSeconds?: number): Promise<number> {
     maybeCleanup();
     const entry = memoryStore.get(key);
     let value = 0;
@@ -93,7 +93,7 @@ export const memoryKVStore: KVStore = {
       value = (entry.value as number) || 0;
     }
     
-    value++;
+    value += amount;
     const expiresAt = ttlSeconds ? Date.now() + ttlSeconds * 1000 : null;
     memoryStore.set(key, { value, expiresAt });
     

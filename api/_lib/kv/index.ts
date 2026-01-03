@@ -47,6 +47,6 @@ export const kv = {
   getByPrefix: async <T>(prefix: string): Promise<Array<{ key: string; value: T }>> => 
     getKVStore().getByPrefix<T>(prefix),
   exists: async (key: string): Promise<boolean> => getKVStore().exists(key),
-  incr: async (key: string, ttlSeconds?: number): Promise<number> => 
-    getKVStore().incr(key, ttlSeconds),
+  incr: async (key: string, amount: number = 1, ttlSeconds?: number): Promise<number> => 
+    getKVStore().incr(key, amount, ttlSeconds),
 };
