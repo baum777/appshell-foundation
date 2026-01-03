@@ -7,3 +7,6 @@ export * from './ta.js';
 export * from './reasoning/index.js';
 export * from './grokPulse.js';
 export * from './usage.js';
+export * from '../http/routes/feed.js';
+export * from '../http/routes/market.js';
+export * from '../http/routes/signals.js';

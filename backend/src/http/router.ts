@@ -3,6 +3,7 @@ import { parse as parseUrl } from 'url';
 import { handleError, invalidJson, methodNotAllowed, notFound, ErrorCodes } from './error.js';
 import { createRequestContext, setRequestIdHeader, clearRequestId } from './requestId.js';
 import { logger } from '../observability/logger.js';
+import { verifyToken, type AuthUser } from '../lib/auth/jwt.js';
 
 /**
  * Simple HTTP Router
@@ -22,6 +23,7 @@ export interface ParsedRequest {
   query: Record<string, string | string[] | undefined>;
   body: unknown;
   userId: string; // Extracted from auth or 'anon'
+  user?: AuthUser;
 }
 
 export type RouteHandler = (
@@ -143,14 +145,16 @@ export class Router {
     });
   }
 
-  private extractUserId(req: IncomingMessage): string {
+  private extractAuth(req: IncomingMessage): { userId: string; user?: AuthUser } {
     const authHeader = req.headers['authorization'];
     if (authHeader?.startsWith('Bearer ')) {
-      // In v1, we just use a simple token as user ID
-      // BACKEND_TODO: Implement proper JWT validation
-      return authHeader.slice(7) || 'anon';
+      const token = authHeader.slice(7);
+      const user = verifyToken(token);
+      if (user) {
+        return { userId: user.userId, user };
+      }
     }
-    return 'anon';
+    return { userId: 'anon' };
   }
 
   async handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
@@ -177,7 +181,7 @@ export class Router {
       }
 
       const body = await this.parseBody(req);
-      const userId = this.extractUserId(req);
+      const { userId, user } = this.extractAuth(req);
 
       const parsedReq: ParsedRequest = {
         method,
@@ -186,6 +190,7 @@ export class Router {
         query: parsed.query as Record<string, string | string[] | undefined>,
         body,
         userId,
+        user,
       };
 
       await found.route.handler(parsedReq, res);
