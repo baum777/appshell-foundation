@@ -1,91 +1,120 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { RefreshCw, LineChart, Eye, TrendingUp, TrendingDown, Loader2 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { RefreshCw, LineChart, Eye, TrendingUp, TrendingDown, Loader2, AlertCircle } from 'lucide-react';
+import { fetchDailyBias, getCachedDailyBias } from '@/lib/api/feed';
+import { FeedCardItem } from '@/components/feed/FeedCardItem';
 
 export function DailyBiasCard() {
   const navigate = useNavigate();
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // Get initial cached data
+  const [initialData] = useState(() => getCachedDailyBias());
 
-  // BACKEND_TODO: Fetch daily bias analysis from backend
-  const bias = {
-    direction: 'bullish' as const,
-    confidence: 72,
-    summary: 'Strong momentum with key support holding. Watch for breakout above resistance.',
-  };
+  const { data, isLoading, isError, isFetching, refetch } = useQuery({
+    queryKey: ['feed', 'dailyBias'],
+    queryFn: fetchDailyBias,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 1,
+    refetchOnWindowFocus: true,
+    initialData: initialData ?? undefined,
+  });
 
   const handleRefresh = useCallback(() => {
-    setIsRefreshing(true);
-    // BACKEND_TODO: Actually refresh data from backend
-    setTimeout(() => setIsRefreshing(false), 1000);
-  }, []);
+    refetch();
+  }, [refetch]);
 
-  return (
-    <Card className="bg-card/50 border-border/50">
-      <CardHeader className="pb-2 sm:pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground uppercase tracking-wide">
-            Daily Bias
-          </CardTitle>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="h-8 w-8 p-0"
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            aria-label="Refresh daily bias"
-          >
-            {isRefreshing ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-            ) : (
+  // Loading state
+  if (isLoading && !data) {
+    return (
+      <Card data-testid="daily-bias-card" className="bg-card/50 border-border/50">
+        <CardHeader className="pb-2 sm:pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground uppercase tracking-wide">
+              Daily Bias
+            </CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-4 w-3/4" />
+          <Skeleton className="h-8 w-full" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Error state without data
+  if (isError && !data) {
+    return (
+      <Card data-testid="daily-bias-card" className="bg-card/50 border-border/50">
+        <CardHeader className="pb-2 sm:pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground uppercase tracking-wide">
+              Daily Bias
+            </CardTitle>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-8 w-8 p-0"
+              onClick={handleRefresh}
+              aria-label="Refresh daily bias"
+            >
               <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
-            )}
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-3 sm:space-y-4">
-        <div className="flex items-center gap-3">
-          <div className={`p-2 rounded-lg shrink-0 ${bias.direction === 'bullish' ? 'bg-chart-positive/10' : 'bg-chart-negative/10'}`}>
-            {bias.direction === 'bullish' ? (
-              <TrendingUp className="h-5 w-5 text-chart-positive" aria-hidden="true" />
-            ) : (
-              <TrendingDown className="h-5 w-5 text-chart-negative" aria-hidden="true" />
-            )}
+            </Button>
           </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-semibold text-foreground capitalize">{bias.direction}</span>
-              <Badge variant="secondary" className="text-xs">
-                {bias.confidence}% confidence
-              </Badge>
-            </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <AlertCircle className="h-4 w-4" />
+            <span>Failed to load bias data</span>
           </div>
-        </div>
-        <p className="text-sm text-muted-foreground leading-relaxed">{bias.summary}</p>
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="flex-1 gap-1.5 text-xs sm:text-sm"
-            onClick={() => navigate('/oracle')}
-          >
-            <Eye className="h-3.5 w-3.5" aria-hidden="true" />
-            <span className="truncate">View analysis</span>
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="flex-1 gap-1.5 text-xs sm:text-sm"
-            onClick={() => navigate('/chart')}
-          >
-            <LineChart className="h-3.5 w-3.5" aria-hidden="true" />
-            <span className="truncate">Open chart</span>
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // No data state
+  if (!data) {
+    return (
+      <Card data-testid="daily-bias-card" className="bg-card/50 border-border/50">
+        <CardHeader className="pb-2 sm:pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground uppercase tracking-wide">
+              Daily Bias
+            </CardTitle>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-8 w-8 p-0"
+              onClick={handleRefresh}
+              disabled={isFetching}
+              aria-label="Refresh daily bias"
+            >
+              {isFetching ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+              ) : (
+                <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+              )}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">No bias data available</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Render feed card in compact mode
+  return (
+    <div data-testid="daily-bias-card">
+      <FeedCardItem card={data} compact />
+    </div>
   );
 }
 

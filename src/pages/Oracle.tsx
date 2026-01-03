@@ -14,6 +14,7 @@ import {
   type OracleFilter,
 } from "@/components/oracle";
 import { GrokPulseLastRunWidget } from "@/components/grokPulse";
+import { UnifiedSignalsView } from "@/components/signals";
 import { toast } from "@/hooks/use-toast";
 import { usePageState } from "@/stubs/pageState";
 import { makeOracle } from "@/stubs/fixtures";
@@ -255,6 +256,11 @@ export default function Oracle() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <GrokPulseLastRunWidget />
         </div>
+
+        {/* Unified Signals View */}
+        <section aria-label="Unified signals">
+          <UnifiedSignalsView />
+        </section>
 
         {/* Pinned cards */}
         <div className="space-y-3">
