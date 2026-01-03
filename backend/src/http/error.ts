@@ -36,6 +36,13 @@ export const ErrorCodes = {
   
   // Oracle
   ORACLE_NOT_FOUND: 'ORACLE_NOT_FOUND',
+
+  // Auth
+  AUTH_MISSING_TOKEN: 'AUTH_MISSING_TOKEN',
+  AUTH_INVALID_TOKEN: 'AUTH_INVALID_TOKEN',
+  AUTH_EXPIRED: 'AUTH_EXPIRED',
+  AUTH_INVALID_CLAIMS: 'AUTH_INVALID_CLAIMS',
+  AUTH_FORBIDDEN: 'AUTH_FORBIDDEN',
 } as const;
 
 export type ErrorCode = typeof ErrorCodes[keyof typeof ErrorCodes];
@@ -70,6 +77,14 @@ export class AppError extends Error {
 }
 
 // Factory functions for common errors
+export function unauthorized(message: string, code: ErrorCode = ErrorCodes.AUTH_INVALID_TOKEN): AppError {
+  return new AppError(message, 401, code);
+}
+
+export function forbidden(message: string, code: ErrorCode = ErrorCodes.AUTH_FORBIDDEN): AppError {
+  return new AppError(message, 403, code);
+}
+
 export function notFound(message: string, code: ErrorCode = ErrorCodes.NOT_FOUND): AppError {
   return new AppError(message, 404, code);
 }

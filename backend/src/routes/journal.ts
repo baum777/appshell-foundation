@@ -18,12 +18,20 @@ import {
   journalRestore,
   journalDelete,
 } from '../domain/journal/repo.js';
-import type { JournalListResponse } from '../domain/journal/types.js';
+import type { JournalEvent } from '../domain/journal/types.js';
 
 /**
  * Journal Routes
  * Per API_SPEC.md section 1
  */
+
+// Helper to map Internal Domain Status (UPPERCASE) to API Contract Status (lowercase)
+function toApiEvent(event: JournalEvent) {
+  return {
+    ...event,
+    status: event.status.toLowerCase(),
+  };
+}
 
 export function handleJournalList(req: ParsedRequest, res: ServerResponse): void {
   const query = validateQuery(journalListQuerySchema, req.query);
@@ -36,8 +44,8 @@ export function handleJournalList(req: ParsedRequest, res: ServerResponse): void
   
   setCacheHeaders(res, { noStore: true });
   
-  const response: JournalListResponse = {
-    items: result.items,
+  const response = {
+    items: result.items.map(toApiEvent),
     nextCursor: result.nextCursor,
   };
   
@@ -55,7 +63,7 @@ export function handleJournalGetById(req: ParsedRequest, res: ServerResponse): v
   }
   
   setCacheHeaders(res, { noStore: true });
-  sendJson(res, entry);
+  sendJson(res, toApiEvent(entry));
 }
 
 export function handleJournalCreate(req: ParsedRequest, res: ServerResponse): void {
@@ -68,7 +76,7 @@ export function handleJournalCreate(req: ParsedRequest, res: ServerResponse): vo
   const entry = journalCreate(req.userId, body, idempotencyKey);
   
   setCacheHeaders(res, { noStore: true });
-  sendCreated(res, entry);
+  sendCreated(res, toApiEvent(entry));
 }
 
 export function handleJournalConfirm(req: ParsedRequest, res: ServerResponse): void {
@@ -92,8 +100,13 @@ export function handleJournalConfirm(req: ParsedRequest, res: ServerResponse): v
   
   const entry = journalConfirm(req.userId, id, payload);
   
+  // journalConfirm can return null if entry disappeared or status mismatch (concurrent)
+  if (!entry) {
+     throw notFound(`Journal entry not found or invalid state`, ErrorCodes.JOURNAL_NOT_FOUND);
+  }
+
   setCacheHeaders(res, { noStore: true });
-  sendJson(res, entry);
+  sendJson(res, toApiEvent(entry));
 }
 
 export function handleJournalArchive(req: ParsedRequest, res: ServerResponse): void {
@@ -108,8 +121,12 @@ export function handleJournalArchive(req: ParsedRequest, res: ServerResponse): v
   
   const entry = journalArchive(req.userId, id, body.reason);
   
+  if (!entry) {
+      throw notFound(`Journal entry not found`, ErrorCodes.JOURNAL_NOT_FOUND);
+  }
+
   setCacheHeaders(res, { noStore: true });
-  sendJson(res, entry);
+  sendJson(res, toApiEvent(entry));
 }
 
 export function handleJournalRestore(req: ParsedRequest, res: ServerResponse): void {
@@ -123,8 +140,12 @@ export function handleJournalRestore(req: ParsedRequest, res: ServerResponse): v
   
   const entry = journalRestore(req.userId, id);
   
+  if (!entry) {
+      throw notFound(`Journal entry not found`, ErrorCodes.JOURNAL_NOT_FOUND);
+  }
+
   setCacheHeaders(res, { noStore: true });
-  sendJson(res, entry);
+  sendJson(res, toApiEvent(entry));
 }
 
 export function handleJournalDelete(req: ParsedRequest, res: ServerResponse): void {

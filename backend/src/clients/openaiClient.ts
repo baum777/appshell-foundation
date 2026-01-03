@@ -1,6 +1,7 @@
 import { getEnv } from '../config/env.js';
 import type { LLMRequest, LLMResponse, LLMUseCase } from '../routes/reasoning/types.js';
 import { usageTracker } from '../lib/usage/usageTracker.js';
+import { withRetry } from '../lib/http/retry.js';
 
 function parseFirstJsonObject(text: string): unknown {
   const trimmed = text.trim();
@@ -18,6 +19,8 @@ function parseFirstJsonObject(text: string): unknown {
   throw new Error('No JSON object found in model output');
 }
 
+type LLMResponseWithUsage = LLMResponse & { usage?: any };
+
 export async function callOpenAI(request: LLMRequest, context?: { useCase: LLMUseCase }): Promise<LLMResponse> {
   const env = getEnv();
   const start = Date.now();
@@ -29,65 +32,85 @@ export async function callOpenAI(request: LLMRequest, context?: { useCase: LLMUs
   const baseUrl = env.OPENAI_BASE_URL || 'https://api.openai.com/v1';
   const url = `${baseUrl.replace(/\/$/, '')}/chat/completions`;
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), request.timeoutMs);
+  const messages = [
+    { role: 'system', content: request.system || 'You are a helpful assistant.' },
+    { role: 'user', content: request.prompt },
+  ];
+
+  const body: any = {
+    model: request.model,
+    temperature: 0,
+    messages,
+  };
+
+  if (request.jsonOnly) {
+    body.response_format = { type: 'json_object' };
+    if (!request.system?.includes('JSON')) {
+      messages[0].content += ' You must return valid JSON.';
+    }
+  }
+
+  const bodyString = JSON.stringify(body);
 
   try {
-    const messages = [
-      { role: 'system', content: request.system || 'You are a helpful assistant.' },
-      { role: 'user', content: request.prompt },
-    ];
+    const result = await withRetry<LLMResponseWithUsage>(async (attempt) => {
+      // Re-create AbortController per attempt
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), request.timeoutMs);
 
-    const body: any = {
-      model: request.model,
-      temperature: 0,
-      messages,
-    };
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${env.OPENAI_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: bodyString,
+          signal: controller.signal,
+        });
 
-    if (request.jsonOnly) {
-      body.response_format = { type: 'json_object' };
-      if (!request.system?.includes('JSON')) {
-        messages[0].content += ' You must return valid JSON.';
+        if (!res.ok) {
+          const text = await res.text();
+          const error: any = new Error(`OpenAI upstream error (${res.status})`);
+          error.status = res.status;
+          error.body = text;
+          error.headers = res.headers;
+          throw error;
+        }
+
+        const text = await res.text();
+        const json = JSON.parse(text) as any;
+        const rawText = json?.choices?.[0]?.message?.content;
+        
+        if (typeof rawText !== 'string') {
+          throw new Error('OpenAI response missing message.content');
+        }
+
+        let parsed: unknown;
+        if (request.jsonOnly) {
+          parsed = parseFirstJsonObject(rawText);
+        }
+
+        return {
+          model: request.model,
+          rawText,
+          parsed,
+          usage: json.usage,
+        };
+      } finally {
+        clearTimeout(timeout);
       }
-    }
-
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${env.OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-      signal: controller.signal,
+    }, {
+      attempts: 3,
+      baseMs: 500, // conservative start
     });
-
-    const text = await res.text();
-
-    if (!res.ok) {
-      const error = new Error(`OpenAI upstream error (${res.status})`);
-      (error as any).status = res.status;
-      (error as any).body = text;
-      throw error;
-    }
-
-    const json = JSON.parse(text) as any;
-    const rawText = json?.choices?.[0]?.message?.content;
-    
-    if (typeof rawText !== 'string') {
-      throw new Error('OpenAI response missing message.content');
-    }
-
-    let parsed: unknown;
-    if (request.jsonOnly) {
-      parsed = parseFirstJsonObject(rawText);
-    }
 
     if (context) {
         const end = Date.now();
         await usageTracker.recordCall('openai', context.useCase, end);
         await usageTracker.recordLatency('openai', context.useCase, end - start, end);
         
-        const usage = json.usage;
+        const usage = result.usage;
         if (usage) {
             await usageTracker.recordTokens('openai', context.useCase, usage.prompt_tokens, usage.completion_tokens, end);
         } else {
@@ -95,17 +118,13 @@ export async function callOpenAI(request: LLMRequest, context?: { useCase: LLMUs
         }
     }
 
-    return {
-      model: request.model,
-      rawText,
-      parsed,
-    };
+    const { usage, ...finalResponse } = result;
+    return finalResponse;
+
   } catch (error) {
     if (context) {
         await usageTracker.recordError('openai', context.useCase, Date.now());
     }
     throw error;
-  } finally {
-    clearTimeout(timeout);
   }
 }
