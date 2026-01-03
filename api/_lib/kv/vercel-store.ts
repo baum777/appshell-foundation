@@ -99,12 +99,14 @@ export const vercelKVStore: KVStore = {
     }
   },
 
-  async incr(key: string, ttlSeconds?: number): Promise<number> {
+  async incr(key: string, amount: number = 1, ttlSeconds?: number): Promise<number> {
     try {
       const client = await getKVClient();
-      const value = await client.incr(key) as number;
-      if (ttlSeconds && value === 1) {
-        // Set TTL on first increment
+      // Use incrby for arbitrary amount, which is safe for 1 as well
+      const value = await client.incrby(key, amount) as number;
+      
+      // If ttl provided and this is arguably a new key (value == amount), set expire
+      if (ttlSeconds && value === amount) {
         await client.expire(key, ttlSeconds);
       }
       return value;

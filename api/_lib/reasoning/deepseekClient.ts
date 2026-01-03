@@ -1,5 +1,6 @@
 import { getEnv } from '../env';
-import type { LLMRequest, LLMResponse } from './types';
+import type { LLMRequest, LLMResponse, LLMUseCase } from './types';
+import { usageTracker } from '../usage/usageTracker';
 
 function parseFirstJsonObject(text: string): unknown {
   const trimmed = text.trim();
@@ -23,8 +24,10 @@ function parseFirstJsonObject(text: string): unknown {
   throw new Error('No JSON object found in model output');
 }
 
-export async function callDeepSeek(request: LLMRequest): Promise<LLMResponse> {
+export async function callDeepSeek(request: LLMRequest, context?: { useCase: LLMUseCase }): Promise<LLMResponse> {
   const env = getEnv();
+  const start = Date.now();
+
   if (!env.DEEPSEEK_API_KEY) {
     throw new Error('MISSING_DEEPSEEK_KEY');
   }
@@ -86,13 +89,30 @@ export async function callDeepSeek(request: LLMRequest): Promise<LLMResponse> {
       parsed = parseFirstJsonObject(rawText);
     }
 
+    if (context) {
+        const end = Date.now();
+        await usageTracker.recordCall('deepseek', context.useCase, end);
+        await usageTracker.recordLatency('deepseek', context.useCase, end - start, end);
+        
+        const usage = json.usage;
+        if (usage) {
+             await usageTracker.recordTokens('deepseek', context.useCase, usage.prompt_tokens, usage.completion_tokens, end);
+        } else {
+             await usageTracker.recordTokens('deepseek', context.useCase, null, null, end);
+        }
+    }
+
     return {
       model: request.model,
       rawText,
       parsed,
     };
+  } catch (error) {
+    if (context) {
+        await usageTracker.recordError('deepseek', context.useCase, Date.now());
+    }
+    throw error;
   } finally {
     clearTimeout(timeout);
   }
 }
-

@@ -1,5 +1,6 @@
 import { getEnv } from '../env';
-import type { LLMRequest, LLMResponse } from './types';
+import type { LLMRequest, LLMResponse, LLMUseCase } from './types';
+import { usageTracker } from '../usage/usageTracker';
 
 function parseFirstJsonObject(text: string): unknown {
   // We ask for strict JSON, but be defensive.
@@ -18,8 +19,10 @@ function parseFirstJsonObject(text: string): unknown {
   throw new Error('No JSON object found in model output');
 }
 
-export async function callOpenAI(request: LLMRequest): Promise<LLMResponse> {
+export async function callOpenAI(request: LLMRequest, context?: { useCase: LLMUseCase }): Promise<LLMResponse> {
   const env = getEnv();
+  const start = Date.now();
+
   if (!env.OPENAI_API_KEY) {
     throw new Error('OPENAI_API_KEY not configured');
   }
@@ -79,11 +82,29 @@ export async function callOpenAI(request: LLMRequest): Promise<LLMResponse> {
       parsed = parseFirstJsonObject(rawText);
     }
 
+    if (context) {
+        const end = Date.now();
+        await usageTracker.recordCall('openai', context.useCase, end);
+        await usageTracker.recordLatency('openai', context.useCase, end - start, end);
+        
+        const usage = json.usage;
+        if (usage) {
+            await usageTracker.recordTokens('openai', context.useCase, usage.prompt_tokens, usage.completion_tokens, end);
+        } else {
+            await usageTracker.recordTokens('openai', context.useCase, null, null, end);
+        }
+    }
+
     return {
       model: request.model,
       rawText,
       parsed,
     };
+  } catch (error) {
+    if (context) {
+        await usageTracker.recordError('openai', context.useCase, Date.now());
+    }
+    throw error;
   } finally {
     clearTimeout(timeout);
   }
