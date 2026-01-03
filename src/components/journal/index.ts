@@ -14,4 +14,3 @@ export { JournalDiaryView } from './JournalDiaryView';
 export { JournalMomentCard } from './JournalMomentCard';
 export { JournalPendingBanner } from './JournalPendingBanner';
 export { JournalReviewOverlay } from './JournalReviewOverlay';
-export { JournalInsightCard } from './JournalInsightCard';

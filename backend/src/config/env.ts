@@ -19,7 +19,6 @@ const envSchema = z.object({
   
   // Auth
   API_KEY: z.string().optional(),
-  JWT_SECRET: z.string().min(1, "JWT_SECRET is required"),
   
   // Push
   VAPID_SUBJECT: z.string().default('mailto:admin@example.com'),
