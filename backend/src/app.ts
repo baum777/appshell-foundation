@@ -29,6 +29,10 @@ import {
   handleGrokPulseMeta,
   handleGrokPulseRun,
   handleUsageSummary,
+  handleGetOracle,
+  handleGetPulse,
+  handleGetDailyBias,
+  handleGetUnified
 } from './routes/index.js';
 
 /**
@@ -81,6 +85,12 @@ export function createApp(): Router {
   router.get('/grok-pulse/history/:address', handleGrokPulseHistory);
   router.get('/grok-pulse/meta/last-run', handleGrokPulseMeta);
   router.post('/grok-pulse/run', handleGrokPulseRun);
+
+  // Signals UX Routes
+  router.get('/feed/oracle', handleGetOracle);
+  router.get('/feed/pulse', handleGetPulse);
+  router.get('/market/daily-bias', handleGetDailyBias);
+  router.get('/signals/unified', handleGetUnified);
   
   return router;
 }
