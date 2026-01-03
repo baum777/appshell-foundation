@@ -7,6 +7,7 @@ export interface KVStore {
   delete(key: string): Promise<boolean>;
   incr(key: string, value?: number, ttlSeconds?: number): Promise<number>;
   exists(key: string): Promise<boolean>;
+  setnx<T>(key: string, value: T, ttlSeconds: number): Promise<boolean>;
 }
 
 class MemoryStore implements KVStore {
@@ -41,6 +42,14 @@ class MemoryStore implements KVStore {
   async exists(key: string): Promise<boolean> {
     const val = await this.get(key);
     return val !== null;
+  }
+
+  async setnx<T>(key: string, value: T, ttlSeconds: number): Promise<boolean> {
+    if (await this.exists(key)) {
+      return false;
+    }
+    await this.set(key, value, ttlSeconds);
+    return true;
   }
 }
 
@@ -84,6 +93,12 @@ class VercelKVStore implements KVStore {
   async exists(key: string): Promise<boolean> {
     const count = await this.client.exists(key);
     return count > 0;
+  }
+
+  async setnx<T>(key: string, value: T, ttlSeconds: number): Promise<boolean> {
+    // Vercel KV (Redis) set with nx and ex
+    const result = await this.client.set(key, value, { nx: true, ex: ttlSeconds });
+    return result === 'OK' || result === 1;
   }
 }
 

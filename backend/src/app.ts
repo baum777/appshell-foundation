@@ -32,7 +32,11 @@ import {
   handleGetOracle,
   handleGetPulse,
   handleGetDailyBias,
-  handleGetUnified
+  handleGetUnified,
+  handleGetOracleAsset,
+  handleRefreshOracleAsset,
+  handleGetPulseAsset,
+  handleRefreshPulseAsset
 } from './routes/index.js';
 
 /**
@@ -70,6 +74,9 @@ export function createApp(): Router {
   router.get('/oracle/daily', handleOracleDaily);
   router.put('/oracle/read-state', handleOracleReadState);
   router.post('/oracle/read-state/bulk', handleOracleBulkReadState);
+  // New Oracle Asset Routes
+  router.get('/oracle/:assetId', handleGetOracleAsset);
+  router.post('/oracle/:assetId/refresh', handleRefreshOracleAsset);
   
   // Chart TA Route
   router.post('/chart/ta', handleTAAnalysis);
@@ -85,6 +92,10 @@ export function createApp(): Router {
   router.get('/grok-pulse/history/:address', handleGrokPulseHistory);
   router.get('/grok-pulse/meta/last-run', handleGrokPulseMeta);
   router.post('/grok-pulse/run', handleGrokPulseRun);
+
+  // New Pulse Asset Routes
+  router.get('/pulse/:assetId', handleGetPulseAsset);
+  router.post('/pulse/:assetId/refresh', handleRefreshPulseAsset);
 
   // Signals UX Routes
   router.get('/feed/oracle', handleGetOracle);

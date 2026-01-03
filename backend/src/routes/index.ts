@@ -10,3 +10,5 @@ export * from './usage.js';
 export * from '../http/routes/feed.js';
 export * from '../http/routes/market.js';
 export * from '../http/routes/signals.js';
+export * from '../http/routes/oracle.js';
+export * from '../http/routes/pulse.js';

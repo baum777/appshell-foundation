@@ -34,14 +34,22 @@ const envSchema = z.object({
   DEEPSEEK_BASE_URL: z.string().default('https://api.deepseek.com'),
   DEEPSEEK_MODEL_REASONING: z.string().default('deepseek-reasoner'),
 
-  // Grok Pulse
-  GROK_API_KEY: z.string().optional(),
-  GROK_BASE_URL: z.string().default('https://api.x.ai/v1'),
+  // DexPaprika
+  DEXPAPRIKA_BASE_URL: z.string().default('https://api.dexpaprika.com/v1'), // Adjust default as needed
+  DEXPAPRIKA_API_KEY: z.string().optional(),
+
+  // Moralis
   MORALIS_API_KEY: z.string().optional(),
+  MORALIS_BASE_URL: z.string().optional(),
   GROK_PULSE_CRON_SECRET: z.string().optional(),
   MAX_DAILY_GROK_CALLS: z.string().transform(Number).default('900'),
   PULSE_TOKEN_ADDRESSES: z.string().default(''), // comma-separated
   
+  // Rate limiting defaults
+  REFRESH_LOCK_TTL_SECONDS: z.string().transform(Number).default('60'),
+  SNAPSHOT_TTL_SECONDS: z.string().transform(Number).default('300'),
+  PROVIDER_COOLDOWN_SECONDS: z.string().transform(Number).default('30'),
+
   // Vercel KV
   KV_REST_API_URL: z.string().optional(),
   KV_REST_API_TOKEN: z.string().optional(),
