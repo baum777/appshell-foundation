@@ -18,6 +18,7 @@ import {
 import { MarketsBanner } from "@/components/chart/MarketsBanner";
 import { BottomCardsCarousel } from "@/components/chart/BottomCardsCarousel";
 import { AITAAnalyzerDialog } from "@/components/chart/AITAAnalyzerDialog";
+import { ChartFeedPanel } from "@/components/feed";
 
 export default function Chart() {
   const navigate = useNavigate();
@@ -197,6 +198,11 @@ export default function Chart() {
                 </div>
                 {/* BACKEND_TODO: integrate chart library */}
               </div>
+            )}
+
+            {/* Chart Feed Panel (Oracle | Pulse toggle) */}
+            {selectedSymbol && (
+              <ChartFeedPanel assetId={selectedSymbol} />
             )}
 
             {/* Bottom Cards Carousel (Oracle / Journal Notes) */}
