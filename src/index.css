@@ -37,8 +37,11 @@
     --warning-foreground: 220 20% 7%;
 
     --border: 220 14% 18%;
+    --border-subtle: 220 14% 14%;
     --input: 220 14% 18%;
     --ring: 174 72% 46%;
+
+    --surface: 220 18% 12%;
 
     --brand: var(--primary);
     --brand-foreground: var(--primary-foreground);

@@ -18,10 +18,18 @@ import {
   JournalDeleteDialog,
   JournalEmptyState,
   JournalSkeleton,
+  
+  JournalDiaryView,
+  JournalPendingBanner,
+  JournalReviewOverlay,
   type JournalView,
+  type JournalViewMode,
   type CreateEntryPayload,
 } from "@/components/journal";
 import type { JournalEntryStub } from "@/stubs/contracts";
+
+// localStorage key for view mode persistence
+const VIEW_MODE_KEY = "journalViewMode";
 
 export default function Journal() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -35,18 +43,28 @@ export default function Journal() {
     restoreEntry,
   } = useJournalStub();
 
-  // Wallet guard state (stub)
-  const [isWalletConnected, setIsWalletConnected] = useState(false);
+  // Wallet guard state (stub) - default to true for demo
+  const [isWalletConnected, setIsWalletConnected] = useState(true);
 
   // View state
   const [activeView, setActiveView] = useState<JournalView>("pending");
   const [searchQuery, setSearchQuery] = useState("");
+  
+  // View mode (List/Diary) with localStorage persistence
+  const [viewMode, setViewMode] = useState<JournalViewMode>(() => {
+    const stored = localStorage.getItem(VIEW_MODE_KEY);
+    return (stored === "diary" || stored === "list") ? stored : "list";
+  });
 
   // Dialog states
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [confirmModalEntry, setConfirmModalEntry] = useState<JournalEntryStub | null>(null);
   const [archiveDialogEntry, setArchiveDialogEntry] = useState<JournalEntryStub | null>(null);
   const [deleteDialogEntry, setDeleteDialogEntry] = useState<JournalEntryStub | null>(null);
+
+  // Review overlay state
+  const [isReviewOverlayOpen, setIsReviewOverlayOpen] = useState(false);
+  const [reviewInitialIndex, setReviewInitialIndex] = useState(0);
 
   // Highlight state
   const [highlightedEntryId, setHighlightedEntryId] = useState<string | null>(null);
@@ -60,6 +78,13 @@ export default function Journal() {
     confirmed: entries.filter((e) => e.status === "confirmed").length,
     archived: entries.filter((e) => e.status === "archived").length,
   }), [entries]);
+
+  // All pending entries (for review overlay and banner)
+  const pendingEntries = useMemo(() => 
+    entries.filter((e) => e.status === "pending")
+      .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()),
+    [entries]
+  );
 
   // Filter entries by view and search
   const filteredEntries = useMemo(() => {
@@ -84,6 +109,20 @@ export default function Journal() {
 
     return result;
   }, [entries, activeView, searchQuery]);
+
+  // Entries for diary view (show pending+confirmed in those segments, archived only when viewing archived)
+  const diaryEntries = useMemo(() => {
+    if (activeView === "archived") {
+      return entries.filter((e) => e.status === "archived");
+    }
+    // For pending/confirmed segments, show both pending and confirmed
+    return entries.filter((e) => e.status === "pending" || e.status === "confirmed");
+  }, [entries, activeView]);
+
+  // Persist view mode to localStorage
+  useEffect(() => {
+    localStorage.setItem(VIEW_MODE_KEY, viewMode);
+  }, [viewMode]);
 
   // Handle URL ?view= sync on initial load
   useEffect(() => {
@@ -181,7 +220,7 @@ export default function Journal() {
   // Handlers
   const handleConfirm = (id: string, payload: ConfirmPayload) => {
     confirmEntry(id, payload);
-    toast.success("Entry confirmed");
+    toast.success("Confirmed");
 
     // Clear selection if confirming the selected entry
     const entryParam = searchParams.get("entry");
@@ -194,7 +233,12 @@ export default function Journal() {
 
   const handleArchive = (id: string, reason: string) => {
     archiveEntry(id, reason);
-    toast.success("Entry archived");
+    toast.success("Archived", {
+      action: {
+        label: "Undo",
+        onClick: () => handleRestore(id),
+      },
+    });
 
     // Clear selection if archiving the selected entry
     const entryParam = searchParams.get("entry");
@@ -245,6 +289,46 @@ export default function Journal() {
     setIsCreateDialogOpen(true);
   }, []);
 
+  // Review overlay handlers
+  const handleOpenReviewOverlay = useCallback((index: number = 0) => {
+    setReviewInitialIndex(index);
+    setIsReviewOverlayOpen(true);
+  }, []);
+
+  const handleReviewConfirm = useCallback((id: string) => {
+    confirmEntry(id, { mood: "", note: "", tags: [] });
+    toast.success("Confirmed");
+  }, [confirmEntry]);
+
+  const handleReviewArchive = useCallback((id: string) => {
+    archiveEntry(id, "");
+    toast.success("Archived", {
+      action: {
+        label: "Undo",
+        onClick: () => handleRestore(id),
+      },
+    });
+  }, [archiveEntry]);
+
+  const handleReviewEdit = useCallback((entry: JournalEntryStub) => {
+    setIsReviewOverlayOpen(false);
+    setConfirmModalEntry(entry);
+  }, []);
+
+  // Diary card click handler
+  const handleDiaryCardClick = useCallback((entry: JournalEntryStub, index: number) => {
+    if (entry.status === "pending") {
+      // Find index in pending entries
+      const pendingIndex = pendingEntries.findIndex((e) => e.id === entry.id);
+      if (pendingIndex !== -1) {
+        handleOpenReviewOverlay(pendingIndex);
+      }
+    } else {
+      // For non-pending entries, just highlight
+      handleRowClick(entry.id);
+    }
+  }, [pendingEntries, handleOpenReviewOverlay, handleRowClick]);
+
   // Loading state
   if (pageState.isLoading) {
     return (
@@ -290,7 +374,12 @@ export default function Journal() {
     <PageContainer testId="page-journal">
       <WalletGuard isConnected={isWalletConnected} onDemoMode={handleDemoMode}>
         <div className="space-y-6">
-          <JournalHeader entries={entries} onLogEntry={handleOpenCreateDialog} />
+          <JournalHeader 
+            entries={entries} 
+            onLogEntry={handleOpenCreateDialog} 
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+          />
 
           {/* Entry not found alert */}
           {entryNotFound && (
@@ -304,6 +393,14 @@ export default function Journal() {
                 </Button>
               </AlertDescription>
             </Alert>
+          )}
+
+          {/* Pending review banner */}
+          {pendingEntries.length > 0 && (
+            <JournalPendingBanner
+              pendingCount={pendingEntries.length}
+              onReviewNow={() => handleOpenReviewOverlay(0)}
+            />
           )}
 
           {isCompletelyEmpty ? (
@@ -323,13 +420,29 @@ export default function Journal() {
                   type="search" 
                   onClearSearch={() => setSearchQuery("")} 
                 />
-              ) : filteredEntries.length === 0 ? (
+              ) : filteredEntries.length === 0 && viewMode === "list" ? (
                 <JournalEmptyState 
                   type="segment" 
                   segmentName={activeView} 
                   onLogEntry={handleOpenCreateDialog}
                 />
+              ) : viewMode === "diary" ? (
+                // Diary view
+                diaryEntries.length === 0 ? (
+                  <JournalEmptyState 
+                    type="segment" 
+                    segmentName={activeView} 
+                    onLogEntry={handleOpenCreateDialog}
+                  />
+                ) : (
+                  <JournalDiaryView
+                    entries={diaryEntries}
+                    activeSegment={activeView}
+                    onCardClick={handleDiaryCardClick}
+                  />
+                )
               ) : (
+                // List view (existing behavior)
                 <div className="space-y-3">
                   {filteredEntries.map((entry) => (
                     <JournalEntryRow
@@ -388,6 +501,17 @@ export default function Journal() {
           isOpen={!!deleteDialogEntry}
           onClose={() => setDeleteDialogEntry(null)}
           onDelete={handleDelete}
+        />
+
+        {/* Review Overlay */}
+        <JournalReviewOverlay
+          isOpen={isReviewOverlayOpen}
+          onClose={() => setIsReviewOverlayOpen(false)}
+          pendingEntries={pendingEntries}
+          initialIndex={reviewInitialIndex}
+          onConfirm={handleReviewConfirm}
+          onArchive={handleReviewArchive}
+          onEdit={handleReviewEdit}
         />
       </WalletGuard>
     </PageContainer>

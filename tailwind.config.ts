@@ -19,10 +19,14 @@ export default {
           DEFAULT: "hsl(var(--brand))",
           foreground: "hsl(var(--brand-foreground))",
         },
-        border: "hsl(var(--border))",
+        border: {
+          DEFAULT: "hsl(var(--border))",
+          subtle: "hsl(var(--border-subtle))",
+        },
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
         overlay: "hsl(var(--overlay))",
+        surface: "hsl(var(--surface))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         primary: {
