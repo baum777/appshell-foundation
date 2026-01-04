@@ -35,6 +35,19 @@ export function toLegacyStatus(status: JournalStatus): LegacyJournalStatus {
 // ─────────────────────────────────────────────────────────────
 
 export type JournalEntrySide = 'BUY' | 'SELL';
+export type JournalContextStatus = 'missing' | 'complete' | 'failed';
+
+export interface OnchainContext {
+  capturedAt: string; // ISO 8601
+  priceUsd: number;
+  liquidityUsd: number;
+  volume24h: number;
+  marketCap: number;
+  ageMinutes: number;
+  holders: number;
+  transfers24h: number;
+  dexId?: string;
+}
 
 export interface JournalEvent {
   id: string;
@@ -46,6 +59,11 @@ export interface JournalEvent {
   dayKey: string; // YYYY-MM-DD - derived from timestamp, stored for indexing
   createdAt: string; // ISO 8601
   updatedAt: string; // ISO 8601
+  
+  // New Optional Fields (v2.1)
+  assetId?: string;
+  onchainContext?: OnchainContext;
+  contextStatus?: JournalContextStatus;
   
   // Optional confirmation data
   confirmData?: {
@@ -84,6 +102,11 @@ export interface JournalEntryRow {
   day_key: string; // Added for indexing
   created_at: string;
   updated_at: string;
+  
+  // New columns
+  asset_id?: string | null;
+  onchain_context_json?: string | null;
+  context_status?: string | null;
 }
 
 export interface JournalConfirmationRow {
@@ -108,6 +131,8 @@ export interface JournalCreateRequest {
   side: JournalEntrySide;
   summary: string;
   timestamp?: string; // defaults to now
+  assetId?: string;
+  onchainContext?: OnchainContext;
 }
 
 export interface JournalConfirmPayload {

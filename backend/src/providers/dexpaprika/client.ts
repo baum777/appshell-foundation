@@ -5,6 +5,8 @@ export interface DexPaprikaPrice {
   priceUsd: number;
   liquidityUsd: number;
   volume24h: number;
+  marketCap: number;
+  ageMinutes: number;
   priceChange24h: number;
   lastUpdated: number;
 }
@@ -38,11 +40,21 @@ export class DexPaprikaClient {
 
       const data = await res.json();
       
+      // Calculate age in minutes if creation time is available, else 0
+      const createdAt = data.createdAt || data.pairCreatedAt;
+      let ageMinutes = 0;
+      if (createdAt) {
+        const createdMs = new Date(createdAt).getTime();
+        ageMinutes = Math.max(0, Math.floor((Date.now() - createdMs) / 60000));
+      }
+
       // Heuristic mapping
       return {
         priceUsd: Number(data.price || data.priceUsd || 0),
         liquidityUsd: Number(data.liquidity || data.liquidityUsd || 0),
         volume24h: Number(data.volume24h || 0),
+        marketCap: Number(data.marketCap || data.fdv || 0), // Use FDV if mcap missing
+        ageMinutes,
         priceChange24h: Number(data.priceChange24h || 0),
         lastUpdated: Date.now()
       };
@@ -51,4 +63,3 @@ export class DexPaprikaClient {
 }
 
 export const dexPaprika = new DexPaprikaClient();
-

@@ -9,15 +9,7 @@ import {
   journalArchiveRequestSchema,
   journalListQuerySchema,
 } from '../validation/schemas.js';
-import {
-  journalCreate,
-  journalGetById,
-  journalList,
-  journalConfirm,
-  journalArchive,
-  journalRestore,
-  journalDelete,
-} from '../domain/journal/repo.js';
+import { journalService } from '../domain/journal/service.js';
 import type { JournalEvent } from '../domain/journal/types.js';
 
 /**
@@ -33,14 +25,14 @@ function toApiEvent(event: JournalEvent) {
   };
 }
 
-export function handleJournalList(req: ParsedRequest, res: ServerResponse): void {
+export async function handleJournalList(req: ParsedRequest, res: ServerResponse): Promise<void> {
   const query = validateQuery(journalListQuerySchema, req.query);
   
   // Support both 'view' and 'status' query params
   const status = query.view || query.status;
   
   // userId is now REQUIRED for all journal operations (multitenancy)
-  const result = journalList(req.userId, status, query.limit, query.cursor);
+  const result = await journalService.listEntries(req.userId, status, query.limit, query.cursor);
   
   setCacheHeaders(res, { noStore: true });
   
@@ -52,11 +44,11 @@ export function handleJournalList(req: ParsedRequest, res: ServerResponse): void
   sendJson(res, response);
 }
 
-export function handleJournalGetById(req: ParsedRequest, res: ServerResponse): void {
+export async function handleJournalGetById(req: ParsedRequest, res: ServerResponse): Promise<void> {
   const { id } = req.params;
   
   // userId is now REQUIRED for all journal operations (multitenancy)
-  const entry = journalGetById(req.userId, id);
+  const entry = await journalService.getEntry(req.userId, id);
   
   if (!entry) {
     throw notFound(`Journal entry not found: ${id}`, ErrorCodes.JOURNAL_NOT_FOUND);
@@ -66,26 +58,26 @@ export function handleJournalGetById(req: ParsedRequest, res: ServerResponse): v
   sendJson(res, toApiEvent(entry));
 }
 
-export function handleJournalCreate(req: ParsedRequest, res: ServerResponse): void {
+export async function handleJournalCreate(req: ParsedRequest, res: ServerResponse): Promise<void> {
   const body = validateBody(journalCreateRequestSchema, req.body);
   
   // Check for idempotency key
   const idempotencyKey = req.query['idempotency-key'] as string | undefined;
   
   // userId is now REQUIRED for all journal operations (multitenancy)
-  const entry = journalCreate(req.userId, body, idempotencyKey);
+  const entry = await journalService.createEntry(req.userId, body, idempotencyKey);
   
   setCacheHeaders(res, { noStore: true });
   sendCreated(res, toApiEvent(entry));
 }
 
-export function handleJournalConfirm(req: ParsedRequest, res: ServerResponse): void {
+export async function handleJournalConfirm(req: ParsedRequest, res: ServerResponse): Promise<void> {
   const { id } = req.params;
   const payload = validateBody(journalConfirmPayloadSchema, req.body);
   
   // userId is now REQUIRED for all journal operations (multitenancy)
   // First check if entry exists
-  const existing = journalGetById(req.userId, id);
+  const existing = await journalService.getEntry(req.userId, id);
   if (!existing) {
     throw notFound(`Journal entry not found: ${id}`, ErrorCodes.JOURNAL_NOT_FOUND);
   }
@@ -98,7 +90,7 @@ export function handleJournalConfirm(req: ParsedRequest, res: ServerResponse): v
     );
   }
   
-  const entry = journalConfirm(req.userId, id, payload);
+  const entry = await journalService.confirmEntry(req.userId, id, payload);
   
   // journalConfirm can return null if entry disappeared or status mismatch (concurrent)
   if (!entry) {
@@ -109,17 +101,17 @@ export function handleJournalConfirm(req: ParsedRequest, res: ServerResponse): v
   sendJson(res, toApiEvent(entry));
 }
 
-export function handleJournalArchive(req: ParsedRequest, res: ServerResponse): void {
+export async function handleJournalArchive(req: ParsedRequest, res: ServerResponse): Promise<void> {
   const { id } = req.params;
   const body = validateBody(journalArchiveRequestSchema, req.body);
   
   // userId is now REQUIRED for all journal operations (multitenancy)
-  const existing = journalGetById(req.userId, id);
+  const existing = await journalService.getEntry(req.userId, id);
   if (!existing) {
     throw notFound(`Journal entry not found: ${id}`, ErrorCodes.JOURNAL_NOT_FOUND);
   }
   
-  const entry = journalArchive(req.userId, id, body.reason);
+  const entry = await journalService.archiveEntry(req.userId, id, body.reason);
   
   if (!entry) {
       throw notFound(`Journal entry not found`, ErrorCodes.JOURNAL_NOT_FOUND);
@@ -129,16 +121,16 @@ export function handleJournalArchive(req: ParsedRequest, res: ServerResponse): v
   sendJson(res, toApiEvent(entry));
 }
 
-export function handleJournalRestore(req: ParsedRequest, res: ServerResponse): void {
+export async function handleJournalRestore(req: ParsedRequest, res: ServerResponse): Promise<void> {
   const { id } = req.params;
   
   // userId is now REQUIRED for all journal operations (multitenancy)
-  const existing = journalGetById(req.userId, id);
+  const existing = await journalService.getEntry(req.userId, id);
   if (!existing) {
     throw notFound(`Journal entry not found: ${id}`, ErrorCodes.JOURNAL_NOT_FOUND);
   }
   
-  const entry = journalRestore(req.userId, id);
+  const entry = await journalService.restoreEntry(req.userId, id);
   
   if (!entry) {
       throw notFound(`Journal entry not found`, ErrorCodes.JOURNAL_NOT_FOUND);
@@ -148,11 +140,11 @@ export function handleJournalRestore(req: ParsedRequest, res: ServerResponse): v
   sendJson(res, toApiEvent(entry));
 }
 
-export function handleJournalDelete(req: ParsedRequest, res: ServerResponse): void {
+export async function handleJournalDelete(req: ParsedRequest, res: ServerResponse): Promise<void> {
   const { id } = req.params;
   
   // userId is now REQUIRED for all journal operations (multitenancy)
-  const deleted = journalDelete(req.userId, id);
+  const deleted = await journalService.deleteEntry(req.userId, id);
   
   if (!deleted) {
     throw notFound(`Journal entry not found: ${id}`, ErrorCodes.JOURNAL_NOT_FOUND);

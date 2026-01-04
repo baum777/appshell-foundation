@@ -12,10 +12,24 @@ import { z } from 'zod';
 export const journalEntrySideSchema = z.enum(['BUY', 'SELL']);
 export const journalEntryStatusSchema = z.enum(['pending', 'confirmed', 'archived']);
 
+export const onchainContextSchema = z.object({
+  capturedAt: z.string().datetime(),
+  priceUsd: z.number().nonnegative(),
+  liquidityUsd: z.number().nonnegative(),
+  volume24h: z.number().nonnegative(),
+  marketCap: z.number().nonnegative(),
+  ageMinutes: z.number().nonnegative(),
+  holders: z.number().nonnegative(),
+  transfers24h: z.number().nonnegative(),
+  dexId: z.string().optional(),
+});
+
 export const journalCreateRequestSchema = z.object({
   side: journalEntrySideSchema,
   summary: z.string().min(1, 'Summary is required').max(1000),
   timestamp: z.string().datetime().optional(),
+  assetId: z.string().optional(),
+  onchainContext: onchainContextSchema.optional(),
 });
 
 export const journalConfirmPayloadSchema = z.object({
@@ -161,6 +175,7 @@ export type JournalCreateRequest = z.infer<typeof journalCreateRequestSchema>;
 export type JournalConfirmPayload = z.infer<typeof journalConfirmPayloadSchema>;
 export type JournalArchiveRequest = z.infer<typeof journalArchiveRequestSchema>;
 export type JournalListQuery = z.infer<typeof journalListQuerySchema>;
+export type OnchainContextValidation = z.infer<typeof onchainContextSchema>;
 
 export type CreateAlertRequest = z.infer<typeof createAlertRequestSchema>;
 export type UpdateAlertRequest = z.infer<typeof updateAlertRequestSchema>;
