@@ -147,13 +147,20 @@ export class Router {
 
   private extractAuth(req: IncomingMessage): { userId: string; user?: AuthUser } {
     const authHeader = req.headers['authorization'];
-    if (authHeader?.startsWith('Bearer ')) {
-      const token = authHeader.slice(7);
-      const user = verifyToken(token);
-      if (user) {
-        return { userId: user.userId, user };
+    
+    // Expect "Bearer <token>"
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.slice(7).trim();
+      
+      if (token) {
+        const user = verifyToken(token);
+        if (user) {
+          return { userId: user.userId, user };
+        }
       }
     }
+    
+    // Default to anonymous if no valid token found
     return { userId: 'anon' };
   }
 

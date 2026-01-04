@@ -12,12 +12,13 @@ export function verifyToken(token: string): AuthUser | null {
     const env = getEnv();
     const secret = env.JWT_SECRET;
     
-    const decoded = jwt.verify(token, secret) as any;
+    const decoded = jwt.verify(token, secret);
     
-    if (typeof decoded === 'object' && decoded.sub) {
+    if (typeof decoded === 'object' && decoded !== null && 'sub' in decoded) {
+      const payload = decoded as { sub: string; tier?: string };
       return {
-        userId: decoded.sub,
-        tier: decoded.tier || 'free'
+        userId: payload.sub,
+        tier: (payload.tier as 'free' | 'pro' | 'vip') || 'free'
       };
     }
     
