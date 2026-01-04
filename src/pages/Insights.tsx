@@ -3,7 +3,7 @@
  * Consolidates: /oracle, /oracle/inbox, /oracle/status, /oracle/:insightId
  * 
  * URL state:
- * - ?filter=new|read - Filter insights
+ * - ?filter=unread|read - Filter insights
  * - ?mode=status - Show provider status
  * - /insights/:insightId - Insight detail
  */
@@ -110,7 +110,7 @@ export default function Insights() {
   const counts = useMemo(
     () => ({
       all: insights.length,
-      new: insights.filter((i) => !i.isRead).length + (takeawayRead ? 0 : 1),
+      unread: insights.filter((i) => !i.isRead).length + (takeawayRead ? 0 : 1),
       read: insights.filter((i) => i.isRead).length + (takeawayRead ? 1 : 0),
     }),
     [insights, takeawayRead]
@@ -122,7 +122,7 @@ export default function Insights() {
 
     // Apply filter
     switch (filter) {
-      case "new":
+      case "unread":
         result = result.filter((i) => !i.isRead);
         break;
       case "read":
@@ -368,14 +368,14 @@ export default function Insights() {
   // Should show takeaway based on filter
   const showTakeaway =
     filter === "all" ||
-    (filter === "new" && !takeawayRead) ||
+    (filter === "unread" && !takeawayRead) ||
     (filter === "read" && takeawayRead);
 
   return (
     <PageContainer testId="page-insights">
       <div className="space-y-6">
         <OracleHeader
-          unreadCount={counts.new}
+          unreadCount={counts.unread}
           onMarkAllRead={handleMarkAllRead}
           onRefresh={handleRefresh}
           isRefreshing={isRefreshing}
