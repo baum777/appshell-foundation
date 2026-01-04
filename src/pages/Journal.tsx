@@ -198,19 +198,18 @@ export default function Journal() {
     setSearchParams(newParams, { replace: true });
   }, [searchParams, setSearchParams]);
 
-  // Handle create entry
+  // Handle create entry (diary entry - confirmed by default per spec)
   const handleCreateEntry = useCallback((payload: CreateEntryPayload) => {
     const newEntry: JournalEntryStub = {
       id: `entry-${Date.now()}`,
-      side: payload.side === "neutral" ? "BUY" : payload.side,
-      status: "pending",
+      side: "BUY", // Diary entries default to BUY
+      status: "confirmed", // Diary entries are confirmed by default
       timestamp: new Date().toISOString(),
-      summary: payload.summary,
+      summary: payload.reasoning || `${payload.feeling} · ${payload.confidence}% confident`,
     };
     setEntries((prev) => [newEntry, ...prev]);
     toast.success("Entry logged");
   }, [setEntries]);
-
   // Handlers
   const handleConfirm = (id: string, payload: ConfirmPayload) => {
     confirmEntry(id, payload);
