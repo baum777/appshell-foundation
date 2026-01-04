@@ -45,7 +45,7 @@ function OracleRedirect() {
 }
 
 function OracleInboxRedirect() {
-  return <Navigate to="/insights" replace />;
+  return <Navigate to="/insights?filter=new" replace />;
 }
 
 function OracleStatusRedirect() {
