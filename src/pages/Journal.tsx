@@ -506,19 +506,35 @@ export default function Journal() {
             <>
               {/* Mode-specific content */}
               {mode === "timeline" && (
-                <JournalTimelineView
-                  entries={timelineEntries}
-                  onCardClick={handleTimelineCardClick}
-                  onEdit={(entry) => setConfirmModalEntry(entry)}
-                  onArchive={(id) => handleArchive(id, "")}
-                  onAddReflection={(entry) => {
-                    // Open mini reflection for this entry
-                    const idx = pendingEntries.findIndex((e) => e.id === entry.id);
-                    if (idx !== -1) {
-                      handleOpenReviewOverlay(idx);
+                <div className="space-y-4">
+                  {/* v2 Segmented Control - advanced filter row */}
+                  <JournalSegmentedControl
+                    value={activeView}
+                    onChange={handleViewChange}
+                    counts={counts}
+                  />
+                  
+                  <JournalTimelineView
+                    entries={activeView === "archived" 
+                      ? entries.filter((e) => e.status === "archived" && (
+                          !searchQuery.trim() || 
+                          e.summary.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          e.id.toLowerCase().includes(searchQuery.toLowerCase())
+                        ))
+                      : timelineEntries
                     }
-                  }}
-                />
+                    onCardClick={handleTimelineCardClick}
+                    onEdit={(entry) => setConfirmModalEntry(entry)}
+                    onArchive={(id) => handleArchive(id, "")}
+                    onAddReflection={(entry) => {
+                      // Open mini reflection for this entry
+                      const idx = pendingEntries.findIndex((e) => e.id === entry.id);
+                      if (idx !== -1) {
+                        handleOpenReviewOverlay(idx);
+                      }
+                    }}
+                  />
+                </div>
               )}
 
               {mode === "inbox" && (
