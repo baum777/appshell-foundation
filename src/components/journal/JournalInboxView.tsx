@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
 import { isToday, isYesterday } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { LayoutList, Check } from "lucide-react";
@@ -82,6 +82,75 @@ export function JournalInboxView({
     [dayGroups]
   );
 
+  // Keyboard shortcuts: J/K nav, C confirm, A archive, N add note
+  useEffect(() => {
+    if (flatEntries.length === 0 || reflectionEntry) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if user is typing in an input/textarea
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable
+      ) {
+        return;
+      }
+
+      const focusedEntry = flatEntries[focusedIndex];
+      if (!focusedEntry) return;
+
+      switch (e.key.toLowerCase()) {
+        case "j":
+          // Next card
+          e.preventDefault();
+          setFocusedIndex((prev) => Math.min(prev + 1, flatEntries.length - 1));
+          break;
+        case "k":
+          // Previous card
+          e.preventDefault();
+          setFocusedIndex((prev) => Math.max(prev - 1, 0));
+          break;
+        case "c":
+          // Confirm focused
+          e.preventDefault();
+          onConfirm(focusedEntry.id);
+          // Move focus if needed
+          if (focusedIndex >= flatEntries.length - 1 && focusedIndex > 0) {
+            setFocusedIndex((prev) => prev - 1);
+          }
+          break;
+        case "a":
+          // Archive focused
+          e.preventDefault();
+          onArchive(focusedEntry.id);
+          // Move focus if needed
+          if (focusedIndex >= flatEntries.length - 1 && focusedIndex > 0) {
+            setFocusedIndex((prev) => prev - 1);
+          }
+          break;
+        case "n":
+          // Add note
+          e.preventDefault();
+          setReflectionEntry(focusedEntry);
+          break;
+        case "escape":
+          // Close composer (handled by drawer, but reset focus)
+          break;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [flatEntries, focusedIndex, reflectionEntry, onConfirm, onArchive]);
+
+  // Reset focus when entries change
+  useEffect(() => {
+    if (focusedIndex >= flatEntries.length) {
+      setFocusedIndex(Math.max(0, flatEntries.length - 1));
+    }
+  }, [flatEntries.length, focusedIndex]);
+
   const todayCount = dayGroups.find((g) => g.label === "Today")?.entries.length ?? 0;
 
   if (pendingEntries.length === 0) {
@@ -123,13 +192,18 @@ export function JournalInboxView({
           </div>
         )}
 
+        {/* Keyboard hint (desktop only) */}
+        <p className="hidden md:block text-xs text-muted-foreground">
+          <kbd className="px-1 py-0.5 rounded bg-muted text-muted-foreground">J</kbd>/<kbd className="px-1 py-0.5 rounded bg-muted text-muted-foreground">K</kbd> navigate · <kbd className="px-1 py-0.5 rounded bg-muted text-muted-foreground">C</kbd> confirm · <kbd className="px-1 py-0.5 rounded bg-muted text-muted-foreground">A</kbd> archive · <kbd className="px-1 py-0.5 rounded bg-muted text-muted-foreground">N</kbd> note
+        </p>
+
         {dayGroups.map((group) => (
           <div key={group.label} className="space-y-3">
             <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
               {group.label}
             </h3>
             <div className="space-y-3">
-              {group.entries.map((entry, idx) => {
+              {group.entries.map((entry) => {
                 const globalIdx = flatEntries.findIndex((e) => e.id === entry.id);
                 return (
                   <JournalInboxCard
