@@ -3,69 +3,100 @@
  * Validates and provides typed access to environment variables
  */
 
-export interface BackendEnv {
-  NODE_ENV: 'development' | 'test' | 'production';
-  // Vercel KV (required for production)
-  KV_REST_API_URL?: string;
-  KV_REST_API_TOKEN?: string;
-  KV_REST_API_READ_ONLY_TOKEN?: string;
-  // External providers (optional, stub if missing)
-  DEXPAPRIKA_API_KEY?: string;
-  MORALIS_API_KEY?: string;
-  // AI (optional)
-  OPENAI_API_KEY?: string;
-  OPENAI_BASE_URL?: string;
-  OPENAI_MODEL_JOURNAL?: string;
-  OPENAI_MODEL_INSIGHTS?: string;
-  OPENAI_MODEL_CHARTS?: string;
+import { z } from 'zod';
+
+// Define the schema
+const envSchema = z.object({
+  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   
-  DEEPSEEK_API_KEY?: string;
-  DEEPSEEK_BASE_URL?: string;
-  DEEPSEEK_MODEL_REASONING?: string;
+  // Auth (JWT)
+  AUTH_JWT_SECRET: z.string().min(32, 'JWT Secret must be at least 32 chars'),
+  AUTH_JWT_ISSUER: z.string().default('tradeapp-api'),
+  AUTH_JWT_AUDIENCE: z.string().default('tradeapp-ui'),
+  AUTH_JWT_CLOCK_TOLERANCE_SECONDS: z.coerce.number().default(30),
+
+  // Vercel KV
+  KV_REST_API_URL: z.string().optional(),
+  KV_REST_API_TOKEN: z.string().optional(),
+  KV_REST_API_READ_ONLY_TOKEN: z.string().optional(),
+  
+  // Security / Internal
+  CRON_SECRET: z.string().optional(),
+  
+  // External providers (optional)
+  DEXPAPRIKA_API_KEY: z.string().optional(),
+  MORALIS_API_KEY: z.string().optional(),
+  
+  // AI (optional)
+  OPENAI_API_KEY: z.string().optional(),
+  OPENAI_BASE_URL: z.string().optional(),
+  OPENAI_MODEL_JOURNAL: z.string().optional(),
+  OPENAI_MODEL_INSIGHTS: z.string().optional(),
+  OPENAI_MODEL_CHARTS: z.string().optional(),
+  
+  DEEPSEEK_API_KEY: z.string().optional(),
+  DEEPSEEK_BASE_URL: z.string().optional(),
+  DEEPSEEK_MODEL_REASONING: z.string().optional(),
 
   // Grok Pulse
-  GROK_API_KEY?: string;
-  GROK_BASE_URL?: string;
-  GROK_MODEL_PULSE?: string;
-  GROK_PULSE_REFRESH_SECRET?: string;
+  GROK_API_KEY: z.string().optional(),
+  GROK_BASE_URL: z.string().optional(),
+  GROK_MODEL_PULSE: z.string().optional(),
+  GROK_PULSE_REFRESH_SECRET: z.string().optional(),
 
-  OPUS_MODEL?: string;
-  // Optional upstream backend (e.g. Railway) for reasoning routes
-}
+  OPUS_MODEL: z.string().optional(),
+});
+
+export type BackendEnv = z.infer<typeof envSchema>;
 
 let cachedEnv: BackendEnv | null = null;
 
 export function getEnv(): BackendEnv {
   if (cachedEnv) return cachedEnv;
 
-  cachedEnv = {
-    NODE_ENV: (process.env.NODE_ENV as 'development' | 'test' | 'production') || 'development',
-    KV_REST_API_URL: process.env.KV_REST_API_URL,
-    KV_REST_API_TOKEN: process.env.KV_REST_API_TOKEN,
-    KV_REST_API_READ_ONLY_TOKEN: process.env.KV_REST_API_READ_ONLY_TOKEN,
-    
-    DEXPAPRIKA_API_KEY: process.env.DEXPAPRIKA_API_KEY,
-    MORALIS_API_KEY: process.env.MORALIS_API_KEY,
-    
-    OPENAI_API_KEY: process.env.OPENAI_API_KEY,
-    OPENAI_BASE_URL: process.env.OPENAI_BASE_URL,
-    OPENAI_MODEL_JOURNAL: process.env.OPENAI_MODEL_JOURNAL,
-    OPENAI_MODEL_INSIGHTS: process.env.OPENAI_MODEL_INSIGHTS,
-    OPENAI_MODEL_CHARTS: process.env.OPENAI_MODEL_CHARTS,
-    
-    DEEPSEEK_API_KEY: process.env.DEEPSEEK_API_KEY,
-    DEEPSEEK_BASE_URL: process.env.DEEPSEEK_BASE_URL,
-    DEEPSEEK_MODEL_REASONING: process.env.DEEPSEEK_MODEL_REASONING,
+  const rawEnv = process.env;
+  
+  // In dev/test, provide defaults for JWT if missing to simplify local setup
+  // but do NOT provide defaults for production secrets
+  const isProd = rawEnv.NODE_ENV === 'production';
+  const isTest = rawEnv.NODE_ENV === 'test';
+  
+  // Safe defaults for dev/test only
+  const defaults = !isProd ? {
+    AUTH_JWT_SECRET: rawEnv.AUTH_JWT_SECRET || 'dev-secret-must-be-at-least-32-bytes-long',
+    AUTH_JWT_ISSUER: rawEnv.AUTH_JWT_ISSUER || 'tradeapp-api',
+    AUTH_JWT_AUDIENCE: rawEnv.AUTH_JWT_AUDIENCE || 'tradeapp-ui',
+  } : {};
 
-    GROK_API_KEY: process.env.GROK_API_KEY,
-    GROK_BASE_URL: process.env.GROK_BASE_URL,
-    GROK_MODEL_PULSE: process.env.GROK_MODEL_PULSE,
-    GROK_PULSE_REFRESH_SECRET: process.env.GROK_PULSE_REFRESH_SECRET,
+  const result = envSchema.safeParse({
+    ...rawEnv,
+    ...defaults
+  });
 
-    OPUS_MODEL: process.env.OPUS_MODEL,
-  };
+  if (!result.success) {
+    // In production, failure to parse required envs is fatal
+    if (isProd) {
+      console.error('❌ Invalid environment variables:', JSON.stringify(result.error.format(), null, 2));
+      throw new Error('Invalid environment variables');
+    } else {
+      console.warn('⚠️ Invalid environment variables (non-fatal in dev):', JSON.stringify(result.error.format(), null, 2));
+      // In dev, we might return a partial object cast to BackendEnv or throw.
+      // For safety, let's throw if JWT is invalid even in dev, but generally we populated a valid default above.
+      throw new Error('Invalid environment variables: ' + result.error.issues.map(i => i.message).join(', '));
+    }
+  }
 
+  // Additional Prod Guards
+  if (isProd && !result.data.CRON_SECRET) {
+     throw new Error('CRON_SECRET is required in production');
+  }
+
+  cachedEnv = result.data;
   return cachedEnv;
+}
+
+export function resetEnvCache() {
+  cachedEnv = null;
 }
 
 // Helpers

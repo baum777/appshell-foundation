@@ -3,35 +3,38 @@ import { generatePulse } from '../_lib/domain/pulse/engine';
 import { savePulse, acquireRefreshLock } from '../_lib/domain/pulse/repo';
 import { getEnv } from '../_lib/env';
 import { logger } from '../_lib/logger';
+import { sendJson } from '../_lib/response';
+import { unauthorized, badRequest, internalError } from '../_lib/errors';
 
 export default createHandler({
-  post: async (req, res) => {
+  auth: 'none',
+  POST: async ({ req, res }) => {
     const env = getEnv();
     const secret = req.headers['x-refresh-secret'];
     
     // Auth Check
+    // If env var is set, enforce it.
     if (env.GROK_PULSE_REFRESH_SECRET && secret !== env.GROK_PULSE_REFRESH_SECRET) {
-      return res.status(401).json({ status: 'error', error: { code: 'UNAUTHORIZED', message: 'Invalid secret' } });
+      throw unauthorized('Invalid refresh secret');
     }
 
-    const { query } = req.body;
+    const { query } = req.body || {};
     if (!query || typeof query !== 'string') {
-      return res.status(400).json({ status: 'error', error: { code: 'BAD_REQUEST', message: 'Missing query' } });
+      throw badRequest('Missing query');
     }
 
     try {
       // Force refresh, but respect lock to avoid stampede even on force
-      const hasLock = await acquireRefreshLock(query);
+      await acquireRefreshLock(query);
       
       const pulse = await generatePulse(query);
       await savePulse(pulse);
       
-      return res.status(200).json({ status: 'success', data: pulse });
+      sendJson(res, pulse);
       
     } catch (error) {
       logger.error('Pulse Force Refresh Error', { error: String(error) });
-      return res.status(500).json({ status: 'error', error: { code: 'INTERNAL', message: 'Refresh failed' } });
+      throw internalError('Refresh failed');
     }
   }
 });
-

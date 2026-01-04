@@ -11,9 +11,11 @@
   },
   "dependencies": {
     "@vercel/kv": "^3.0.0",
+    "jsonwebtoken": "^9.0.3",
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^22.19.3",
     "@vercel/node": "^5.0.0",
     "typescript": "^5.8.3",
