@@ -18,6 +18,14 @@ export const ErrorCodes = {
   RATE_LIMITED: 'RATE_LIMITED',
   BUDGET_EXCEEDED: 'BUDGET_EXCEEDED',
   
+  // Auth
+  UNAUTHORIZED: 'UNAUTHORIZED',
+  INVALID_AUTH_HEADER: 'INVALID_AUTH_HEADER',
+  INVALID_TOKEN: 'INVALID_TOKEN',
+  TOKEN_EXPIRED: 'TOKEN_EXPIRED',
+  INVALID_TOKEN_CLAIMS: 'INVALID_TOKEN_CLAIMS',
+  FORBIDDEN: 'FORBIDDEN',
+  
   // Journal
   JOURNAL_NOT_FOUND: 'JOURNAL_NOT_FOUND',
   JOURNAL_INVALID_STATE: 'JOURNAL_INVALID_STATE',
@@ -85,6 +93,14 @@ export function rateLimited(message = 'Rate limit exceeded'): AppError {
 
 export function internalError(message = 'Internal server error'): AppError {
   return new AppError(message, 500, ErrorCodes.INTERNAL_ERROR);
+}
+
+export function unauthorized(message: string, code: ErrorCode = ErrorCodes.UNAUTHORIZED): AppError {
+  return new AppError(message, 401, code);
+}
+
+export function forbidden(message: string): AppError {
+  return new AppError(message, 403, ErrorCodes.FORBIDDEN);
 }
 
 export function handleError(res: VercelResponse, error: unknown): void {
