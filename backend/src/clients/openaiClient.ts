@@ -53,7 +53,7 @@ export async function callOpenAI(request: LLMRequest, context?: { useCase: LLMUs
   const bodyString = JSON.stringify(body);
 
   try {
-    const result = await withRetry<LLMResponseWithUsage>(async (attempt) => {
+    const result = await withRetry<LLMResponseWithUsage>(async (_attempt) => {
       // Re-create AbortController per attempt
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), request.timeoutMs);

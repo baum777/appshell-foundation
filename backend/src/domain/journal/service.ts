@@ -3,18 +3,14 @@ import type {
   JournalEvent, 
   JournalCreateRequest, 
   JournalConfirmPayload, 
-  LegacyJournalStatus,
-  JournalContextStatus
+  LegacyJournalStatus
 } from './types.js';
 import { 
   journalRepoSQLite, 
   extractDayKey, 
   assertUserId 
 } from './repo.js'; // Will update repo.ts to export these still
-import { buildOnchainContext } from './context.js';
-import { getLogger } from '../../observability/logger.js';
 
-const logger = getLogger('JournalService');
 
 export class JournalService {
   
@@ -44,25 +40,13 @@ export class JournalService {
       onchainContext: request.onchainContext
     };
 
-    // Context Enrichment Logic
-    if (event.assetId && !event.onchainContext) {
-      try {
-        // Attempt to fetch context (non-blocking if we wanted, but for now blocking as per simple flow, 
-        // or we could make it async/background. The plan says "Offline-first: do not block writes on enrichment failure".
-        // Use await but catch error to not fail creation.
-        logger.info(`Enriching journal entry ${id} for asset ${event.assetId}`);
-        const context = await buildOnchainContext(event.assetId);
-        event.onchainContext = context;
-        event.contextStatus = 'complete';
-      } catch (err) {
-        logger.warn(`Failed to enrich journal entry ${id}: ${err}`);
-        event.contextStatus = 'missing'; // Mark for background repair
-      }
-    } else if (event.onchainContext) {
+    // Ruleset v1:
+    // - Snapshot-at-write: if onchainContext is provided, persist it as-is.
+    // - Offline-first: do NOT block writes on enrichment; backend must not synchronously enrich on create.
+    if (event.onchainContext) {
       event.contextStatus = 'complete';
     } else if (event.assetId) {
-       // Should have been caught by first block, but safety check
-       event.contextStatus = 'missing';
+      event.contextStatus = 'missing';
     }
 
     // Persist
@@ -98,7 +82,7 @@ export class JournalService {
   async confirmEntry(
     userId: string, 
     id: string, 
-    payload: JournalConfirmPayload
+    payload: Partial<JournalConfirmPayload>
   ): Promise<JournalEvent | null> {
     assertUserId(userId);
     const now = new Date().toISOString();
@@ -111,9 +95,9 @@ export class JournalService {
     entry.status = 'CONFIRMED';
     entry.updatedAt = now;
     entry.confirmData = {
-      mood: payload.mood,
-      note: payload.note,
-      tags: payload.tags,
+      mood: payload.mood ?? '',
+      note: payload.note ?? '',
+      tags: payload.tags ?? [],
       confirmedAt: now
     };
 
@@ -124,7 +108,7 @@ export class JournalService {
   async archiveEntry(
     userId: string, 
     id: string, 
-    reason: string
+    reason?: string
   ): Promise<JournalEvent | null> {
     assertUserId(userId);
     const now = new Date().toISOString();
@@ -136,7 +120,7 @@ export class JournalService {
     entry.status = 'ARCHIVED';
     entry.updatedAt = now;
     entry.archiveData = {
-      reason,
+      reason: reason ?? '',
       archivedAt: now
     };
 

@@ -18,10 +18,14 @@ export async function handleReasoningTradeReview(req: ParsedRequest, res: Server
   rateLimiters.reasoning(req.path, req.userId);
 
   const body = validateBody(tradeReviewRequestSchema, req.body);
+  const bodyWithVersion = {
+    ...body,
+    version: body.version ?? REASONING_CONTRACT_VERSION,
+  };
 
   setCacheHeaders(res, { noStore: true });
 
-  const result = await runReasoning(req, 'trade-review', body);
+  const result = await runReasoning(req, 'trade-review', bodyWithVersion);
 
   sendJson(res, result);
 }

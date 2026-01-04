@@ -1,9 +1,7 @@
 import { dexPaprika } from '../../providers/dexpaprika/client.js';
 import { moralis } from '../../providers/moralis/client.js';
 import type { OnchainContext } from './types.js';
-import { getLogger } from '../../observability/logger.js';
-
-const logger = getLogger('JournalContext');
+import { logger } from '../../observability/logger.js';
 
 /**
  * Builds the onchain context for a given asset.
@@ -36,7 +34,7 @@ export async function buildOnchainContext(assetId: string, dexId?: string): Prom
       dexId
     };
   } catch (err) {
-    logger.error('Failed to build onchain context', { assetId, error: err });
+    logger.error('Failed to build onchain context', { assetId, error: String(err) });
     throw err;
   }
 }

@@ -33,13 +33,17 @@ export const journalCreateRequestSchema = z.object({
 });
 
 export const journalConfirmPayloadSchema = z.object({
-  mood: z.string().min(1, 'Mood is required'),
-  note: z.string(),
-  tags: z.array(z.string()),
+  // Ruleset v1: confirm must work without mandatory reflection fields.
+  // We still persist a value for DB NOT NULL columns via defaults.
+  mood: z.string().default(''),
+  note: z.string().default(''),
+  tags: z.array(z.string()).default([]),
 });
 
 export const journalArchiveRequestSchema = z.object({
-  reason: z.string().min(1, 'Reason is required'),
+  // Ruleset v1: quickflip archive must work without a required reason.
+  // DB expects NOT NULL, so default to empty string.
+  reason: z.string().default(''),
 });
 
 export const journalListQuerySchema = z.object({

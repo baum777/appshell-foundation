@@ -4,7 +4,6 @@ import { getOracleCards } from './oracleService.js';
 import { getDailyBias } from './dailyBiasService.js';
 import { generatePulseCards } from './pulseService.js';
 import type { FeedCard, UnifiedSignalsResponse, SignalFilter, SignalSort, Impact, FreshnessStatus } from '../../domain/signals/types.js';
-import { logger } from '../../observability/logger.js';
 
 type Tier = "free" | "pro" | "vip";
 

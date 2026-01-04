@@ -1,9 +1,8 @@
 import { getMarketSnapshot, type MarketSnapshot } from '../../adapters/market/marketAdapter.js';
 import { getOnchainSnapshot, type OnchainSnapshot } from '../../adapters/onchain/onchainAdapter.js';
 import { generateGrokJson } from '../llm/grokJson.js';
-import type { FeedCard, Impact } from '../../domain/signals/types.js';
+import type { FeedCard } from '../../domain/signals/types.js';
 import { calculateFreshness, TTL } from '../../lib/time/freshness.js';
-import { logger } from '../../observability/logger.js';
 import { v4 as uuidv4 } from 'uuid';
 
 // Baseline generation logic
@@ -13,7 +12,6 @@ function generateBaselineOracleCards(
   onchain: OnchainSnapshot
 ): FeedCard[] {
   const cards: FeedCard[] = [];
-  const now = new Date().toISOString();
 
   // 1. Price Momentum
   if (market.change1hPct && Math.abs(market.change1hPct) > 5) {
@@ -67,7 +65,7 @@ function generateBaselineOracleCards(
   return cards;
 }
 
-export async function getOracleCards(assetId: string, userId: string, tier: string = 'free'): Promise<FeedCard[]> {
+export async function getOracleCards(assetId: string, _userId: string, tier: string = 'free'): Promise<FeedCard[]> {
   const [market, onchain] = await Promise.all([
     getMarketSnapshot(assetId),
     getOnchainSnapshot(assetId)

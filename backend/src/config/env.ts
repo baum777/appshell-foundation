@@ -15,7 +15,15 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.string().transform(Number).default('3000'),
   DATABASE_PATH: z.string().default('./.data/tradeapp.sqlite'),
+  // Optional explicit DB URL (preferred by config.ts). Keep default aligned with DATABASE_PATH.
+  DATABASE_URL: z.string().default('sqlite:./.data/tradeapp.sqlite'),
   API_BASE_PATH: z.string().default('/api'),
+
+  // Logging
+  LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
+
+  // Compat: some modules expect BACKEND_PORT (fallback to PORT in config.ts)
+  BACKEND_PORT: z.string().transform(Number).optional(),
   
   // Auth
   API_KEY: z.string().optional(),
@@ -29,10 +37,20 @@ const envSchema = z.object({
   // AI
   OPENAI_API_KEY: z.string().optional(),
   OPENAI_BASE_URL: z.string().default('https://api.openai.com/v1'),
+  OPENAI_MODEL_JOURNAL: z.string().optional(),
+  OPENAI_MODEL_INSIGHTS: z.string().optional(),
+  OPENAI_MODEL_CHARTS: z.string().optional(),
   
   DEEPSEEK_API_KEY: z.string().optional(),
   DEEPSEEK_BASE_URL: z.string().default('https://api.deepseek.com'),
   DEEPSEEK_MODEL_REASONING: z.string().default('deepseek-reasoner'),
+
+  // xAI (Grok)
+  GROK_API_KEY: z.string().optional(),
+  GROK_BASE_URL: z.string().optional(),
+
+  // Optional override model name used by some code paths
+  OPUS_MODEL: z.string().optional(),
 
   // DexPaprika
   DEXPAPRIKA_BASE_URL: z.string().default('https://api.dexpaprika.com/v1'), // Adjust default as needed
@@ -62,6 +80,8 @@ const envSchema = z.object({
 });
 
 export type Env = z.infer<typeof envSchema>;
+// Backwards-compat alias used by config/logger typing in some branches.
+export type BackendEnv = Env;
 
 let envCache: Env | null = null;
 

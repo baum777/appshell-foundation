@@ -14,6 +14,7 @@ process.env.NODE_ENV = 'test';
 process.env.DATABASE_URL = `sqlite:${TEST_DB_PATH}`;
 process.env.BACKEND_PORT = '3001';
 process.env.LOG_LEVEL = 'error';
+process.env.JWT_SECRET = 'test-secret';
 
 // Ensure data directory exists
 if (!existsSync('./.data')) {

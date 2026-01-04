@@ -22,6 +22,7 @@ export interface ParsedRequest {
   params: RouteParams;
   query: Record<string, string | string[] | undefined>;
   body: unknown;
+  headers: IncomingMessage['headers'];
   userId: string; // Extracted from auth or 'anon'
   user?: AuthUser;
 }
@@ -196,6 +197,7 @@ export class Router {
         params: found.params,
         query: parsed.query as Record<string, string | string[] | undefined>,
         body,
+        headers: req.headers,
         userId,
         user,
       };

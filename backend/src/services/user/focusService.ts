@@ -1,5 +1,4 @@
 import { getKV } from '../../lib/kv/store.js';
-import { getEnv } from '../../config/env.js';
 
 const FOCUS_KEY_PREFIX = 'user:focus:';
 const DEFAULT_TTL_SECONDS = 15 * 60; // 15 minutes
@@ -18,7 +17,6 @@ export async function getFocus(userId: string): Promise<UserFocus | null> {
 export async function setFocus(userId: string, assetId: string): Promise<void> {
   const kv = getKV();
   const key = `${FOCUS_KEY_PREFIX}${userId}`;
-  const env = getEnv();
   
   // Use env var if available (parsed as number of minutes? Env schema says minutes?)
   // The plan said "SIGNALS_FOCUS_TTL_MINUTES (default 15)" in env vars section but I haven't added it to env.ts yet.

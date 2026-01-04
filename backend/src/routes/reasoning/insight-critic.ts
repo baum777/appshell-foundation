@@ -19,10 +19,14 @@ export async function handleReasoningInsightCritic(req: ParsedRequest, res: Serv
   rateLimiters.reasoning(req.path, req.userId);
 
   const body = validateBody(insightCriticRequestSchema, req.body);
+  const bodyWithVersion = {
+    ...body,
+    version: body.version ?? REASONING_CONTRACT_VERSION,
+  };
 
   setCacheHeaders(res, { noStore: true });
 
-  const result = await runInsightCritic(req, body);
+  const result = await runInsightCritic(req, bodyWithVersion);
 
   sendJson(res, result);
 }

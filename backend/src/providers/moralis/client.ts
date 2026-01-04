@@ -51,10 +51,10 @@ export class MoralisClient {
         throw new Error(`Moralis error: ${res.status}`);
       }
 
-      const data = await res.json();
+      const data = (await res.json()) as any;
       return {
-        holders: Number(data.holders || 0),
-        transfers24h: Number(data.transfers?.count || 0)
+        holders: Number(data?.holders || 0),
+        transfers24h: Number(data?.transfers?.count || 0)
       };
     });
   }

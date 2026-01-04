@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { generatePulseCards } from '../../services/signals/pulseService.js';
 
 vi.mock('../../services/llm/grokJson.js', () => ({
-  generateGrokJson: vi.fn().mockImplementation(async (sys, prompt, useCase) => {
+  generateGrokJson: vi.fn().mockImplementation(async (_sys, _prompt, _useCase) => {
     return {
       cards: [
         { title: 'Grok Pulse', why: 'Because', impact: 'high', confidence: 0.9 }

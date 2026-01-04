@@ -5,18 +5,20 @@ import type { GrokSentimentSnapshot, PulseGlobalToken } from '../../domain/grokP
 
 describe('Grok Pulse Lexicon', () => {
   it('maps sentiment terms correctly', () => {
-    expect(mapSentimentTerm({ score: 85, label: 'MOON', low_confidence: false })).toBe('moon potential');
-    expect(mapSentimentTerm({ score: -75, label: 'DEAD', low_confidence: false })).toBe('dead project');
-    expect(mapSentimentTerm({ score: 70, label: 'STRONG_BULL', low_confidence: false })).toBe('strong bull momentum');
-    expect(mapSentimentTerm({ score: 0, label: 'NEUTRAL', low_confidence: false })).toBe('neutral stagnation');
-    expect(mapSentimentTerm({ score: 0, label: 'NEUTRAL', low_confidence: false, delta: 30 })).toBe('choppy market');
+    // Keep confidence < 0.9 so confidenceRules do not override score bands.
+    expect(mapSentimentTerm({ score: 85, label: 'MOON', confidence: 0.5, low_confidence: false })).toBe('moon potential');
+    expect(mapSentimentTerm({ score: -75, label: 'DEAD', confidence: 0.5, low_confidence: false })).toBe('dead project');
+    expect(mapSentimentTerm({ score: 70, label: 'STRONG_BULL', confidence: 0.5, low_confidence: false })).toBe('strong bull momentum');
+    expect(mapSentimentTerm({ score: 0, label: 'NEUTRAL', confidence: 0.5, low_confidence: false })).toBe('neutral stagnation');
+    // Delta rules: large positive delta on positive score triggers "fomo incoming".
+    expect(mapSentimentTerm({ score: 50, label: 'BULL', confidence: 0.5, low_confidence: false, delta: 30 })).toBe('fomo incoming');
   });
 
   it('maps CTA phrases correctly', () => {
-    expect(mapCtaPhrase({ cta: 'APE', score: 60, label: 'BULL' })).toBe('ape in');
-    expect(mapCtaPhrase({ cta: 'APE', score: 20, label: 'BULL' })).toBe('position early');
-    expect(mapCtaPhrase({ cta: 'DUMP', score: -50, label: 'BEAR' })).toBe('dump fast');
-    expect(mapCtaPhrase({ cta: 'AVOID', score: -60, label: 'RUG' })).toBe('avoid rugs');
+    expect(mapCtaPhrase({ cta: 'APE', score: 85, label: 'MOON', confidence: 0.5, low_confidence: false })).toBe('ape in');
+    expect(mapCtaPhrase({ cta: 'APE', score: 45, label: 'BULL', confidence: 0.5, low_confidence: false })).toBe('position early');
+    expect(mapCtaPhrase({ cta: 'DUMP', score: -50, label: 'BEAR', confidence: 0.5, low_confidence: false })).toBe('dump fast');
+    expect(mapCtaPhrase({ cta: 'AVOID', score: -60, label: 'RUG', confidence: 0.5, low_confidence: false })).toBe('avoid rugs');
   });
 });
 

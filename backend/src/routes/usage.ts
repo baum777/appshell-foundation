@@ -3,7 +3,7 @@ import { ParsedRequest } from '../http/router.js';
 import { sendJson } from '../http/response.js';
 import { usageTracker } from '../lib/usage/usageTracker.js';
 
-export async function handleUsageSummary(req: ParsedRequest, res: ServerResponse): Promise<void> {
+export async function handleUsageSummary(_req: ParsedRequest, res: ServerResponse): Promise<void> {
   const now = Date.now();
   
   const openaiJournal = await usageTracker.getUseCaseStats('openai', 'journal', now);

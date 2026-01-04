@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'http';
 import { verifyToken, type AuthUser } from '../../lib/auth/jwt.js';
-import { sendError, unauthorized, forbidden } from '../../http/error.js';
+import { sendError, unauthorized } from '../../http/error.js';
 
 export interface AuthenticatedRequest extends IncomingMessage {
   user: AuthUser;

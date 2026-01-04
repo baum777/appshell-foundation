@@ -1,4 +1,4 @@
-import { getEnv, type BackendEnv } from './env.js';
+import { getEnv, type Env } from './env.js';
 
 /**
  * Application Configuration
@@ -6,7 +6,7 @@ import { getEnv, type BackendEnv } from './env.js';
  */
 
 export interface AppConfig {
-  env: BackendEnv;
+  env: Env;
   isDev: boolean;
   isTest: boolean;
   isProd: boolean;
@@ -19,7 +19,7 @@ export interface AppConfig {
     path: string;
   };
   logging: {
-    level: BackendEnv['LOG_LEVEL'];
+    level: Env['LOG_LEVEL'];
   };
   version: string;
 }
@@ -27,8 +27,9 @@ export interface AppConfig {
 export function createConfig(): AppConfig {
   const env = getEnv();
 
-  // Extract SQLite file path from DATABASE_URL (format: sqlite:./path/to/file.sqlite)
-  const dbPath = env.DATABASE_URL.replace(/^sqlite:/, '');
+  // Prefer DATABASE_URL (format: sqlite:./path/to/file.sqlite), fall back to DATABASE_PATH.
+  const dbUrl = env.DATABASE_URL || `sqlite:${env.DATABASE_PATH}`;
+  const dbPath = dbUrl.replace(/^sqlite:/, '');
 
   return {
     env,
@@ -36,11 +37,11 @@ export function createConfig(): AppConfig {
     isTest: env.NODE_ENV === 'test',
     isProd: env.NODE_ENV === 'production',
     server: {
-      port: env.BACKEND_PORT,
+      port: env.BACKEND_PORT ?? env.PORT,
       apiBasePath: env.API_BASE_PATH,
     },
     database: {
-      url: env.DATABASE_URL,
+      url: dbUrl,
       path: dbPath,
     },
     logging: {

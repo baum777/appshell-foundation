@@ -38,10 +38,10 @@ export class DexPaprikaClient {
         throw new Error(`DexPaprika error: ${res.status} ${res.statusText}`);
       }
 
-      const data = await res.json();
+      const data = (await res.json()) as any;
       
       // Calculate age in minutes if creation time is available, else 0
-      const createdAt = data.createdAt || data.pairCreatedAt;
+      const createdAt = data?.createdAt || data?.pairCreatedAt;
       let ageMinutes = 0;
       if (createdAt) {
         const createdMs = new Date(createdAt).getTime();
@@ -50,12 +50,12 @@ export class DexPaprikaClient {
 
       // Heuristic mapping
       return {
-        priceUsd: Number(data.price || data.priceUsd || 0),
-        liquidityUsd: Number(data.liquidity || data.liquidityUsd || 0),
-        volume24h: Number(data.volume24h || 0),
-        marketCap: Number(data.marketCap || data.fdv || 0), // Use FDV if mcap missing
+        priceUsd: Number(data?.price || data?.priceUsd || 0),
+        liquidityUsd: Number(data?.liquidity || data?.liquidityUsd || 0),
+        volume24h: Number(data?.volume24h || 0),
+        marketCap: Number(data?.marketCap || data?.fdv || 0), // Use FDV if mcap missing
         ageMinutes,
-        priceChange24h: Number(data.priceChange24h || 0),
+        priceChange24h: Number(data?.priceChange24h || 0),
         lastUpdated: Date.now()
       };
     });

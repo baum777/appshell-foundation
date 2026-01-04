@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken';
+import * as jwt from 'jsonwebtoken';
 import { getEnv } from '../../config/env.js';
 
 export interface AuthUser {
@@ -30,9 +30,10 @@ export function verifyToken(token: string): AuthUser | null {
 
 export function signToken(payload: { userId: string; tier?: string }, expiresIn = '7d'): string {
   const env = getEnv();
+  const exp: jwt.SignOptions['expiresIn'] = expiresIn as jwt.SignOptions['expiresIn'];
   return jwt.sign(
     { sub: payload.userId, tier: payload.tier },
     env.JWT_SECRET,
-    { expiresIn }
+    { expiresIn: exp }
   );
 }
