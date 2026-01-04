@@ -1,4 +1,5 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { ErrorBanner } from "@/components/layout/PageStates";
 import {
@@ -45,9 +46,29 @@ import {
 } from "lucide-react";
 
 export default function Settings() {
+  const [searchParams] = useSearchParams();
   const isMobile = useIsMobile();
   const pageState = usePageState("ready");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // URL section param for deep linking (consolidated from /settings/*)
+  const urlSection = searchParams.get("section");
+  
+  // Map URL section param to accordion value
+  const sectionMapping: Record<string, string> = {
+    providers: "provider-params",
+    data: "cache-offline",
+    experiments: "privacy-diagnostics",
+    privacy: "privacy-diagnostics",
+  };
+
+  // Default open sections based on URL
+  const defaultOpenSections = useMemo(() => {
+    if (urlSection && sectionMapping[urlSection]) {
+      return [sectionMapping[urlSection]];
+    }
+    return [];
+  }, [urlSection]);
 
   // Stores
   const settingsStore = useSettingsStore();
@@ -489,7 +510,7 @@ export default function Settings() {
           </div>
         ) : (
           // Mobile: Accordion layout
-          <Accordion type="single" collapsible className="space-y-2">
+          <Accordion type="single" collapsible className="space-y-2" defaultValue={defaultOpenSections[0]}>
             {/* Tier & Budgets */}
             <AccordionItem value="tier-budgets" className="border rounded-lg px-4">
               <AccordionTrigger className="hover:no-underline">

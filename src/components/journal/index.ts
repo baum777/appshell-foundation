@@ -27,3 +27,6 @@ export { JournalTimelineView } from './JournalTimelineView';
 export { JournalTradeCard } from './JournalTradeCard';
 export { JournalDiaryCard } from './JournalDiaryCard';
 export { JournalInsightTimelineCard } from './JournalInsightTimelineCard';
+
+// Playbook view (consolidated from Handbook)
+export { JournalPlaybookView, JournalPlaybookSkeleton } from './JournalPlaybookView';

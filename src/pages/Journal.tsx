@@ -25,7 +25,9 @@ import {
   JournalTimelineView,
   JournalInboxView,
   JournalLearnView,
+  JournalPlaybookView,
   getStoredJournalMode,
+  setStoredJournalMode,
   type JournalMode,
   type JournalView,
   type CreateEntryPayload,
@@ -54,8 +56,15 @@ export default function Journal() {
   // Wallet guard state (stub) - default to true for demo
   const [isWalletConnected, setIsWalletConnected] = useState(true);
 
-  // Journal v3 mode state
-  const [mode, setMode] = useState<JournalMode>(getStoredJournalMode);
+  // Journal v3 mode state - URL-driven
+  const urlMode = searchParams.get("mode") as JournalMode | null;
+  const [mode, setMode] = useState<JournalMode>(() => {
+    // URL param takes precedence
+    if (urlMode && ["timeline", "inbox", "learn", "playbook"].includes(urlMode)) {
+      return urlMode;
+    }
+    return getStoredJournalMode();
+  });
   
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
@@ -125,7 +134,34 @@ export default function Journal() {
     setSyncErrors(getSyncErrors());
   }, []);
 
-  // Handle URL ?view= sync on initial load
+  // Handle URL ?mode= sync on initial load and changes
+  useEffect(() => {
+    const modeParam = searchParams.get("mode") as JournalMode | null;
+    if (modeParam && ["timeline", "inbox", "learn", "playbook"].includes(modeParam)) {
+      if (mode !== modeParam) {
+        setMode(modeParam);
+        setStoredJournalMode(modeParam);
+      }
+    }
+  }, [searchParams]);
+
+  // Sync mode to URL when changed via toggle
+  const handleModeChange = useCallback((newMode: JournalMode) => {
+    setMode(newMode);
+    setStoredJournalMode(newMode);
+    const newParams = new URLSearchParams(searchParams);
+    if (newMode !== "timeline") {
+      newParams.set("mode", newMode);
+    } else {
+      newParams.delete("mode");
+    }
+    // Preserve entry param
+    const entryParam = searchParams.get("entry");
+    if (entryParam) newParams.set("entry", entryParam);
+    setSearchParams(newParams, { replace: true });
+  }, [searchParams, setSearchParams]);
+
+  // Handle URL ?view= sync on initial load (legacy)
   useEffect(() => {
     const viewParam = searchParams.get("view") as JournalView | null;
     if (viewParam && ["pending", "confirmed", "archived"].includes(viewParam)) {
@@ -424,7 +460,7 @@ export default function Journal() {
                 </h1>
                 <JournalModeToggle
                   value={mode}
-                  onChange={setMode}
+                  onChange={handleModeChange}
                   pendingCount={counts.pending}
                 />
               </div>
@@ -543,7 +579,7 @@ export default function Journal() {
                   onArchive={handleInboxArchive}
                   onSaveNote={handleInboxSaveNote}
                   onConfirmWithNote={handleInboxConfirmWithNote}
-                  onGoToTimeline={() => setMode("timeline")}
+                  onGoToTimeline={() => handleModeChange("timeline")}
                   syncErrors={syncErrors}
                 />
               )}
@@ -553,10 +589,14 @@ export default function Journal() {
                   onStartReview={() => handleOpenReviewOverlay(0)}
                   onShowEvidence={(type, index) => {
                     // Switch to timeline with filter
-                    setMode("timeline");
+                    handleModeChange("timeline");
                     toast.info(`Showing ${type} evidence`);
                   }}
                 />
+              )}
+
+              {mode === "playbook" && (
+                <JournalPlaybookView />
               )}
             </>
           )}
