@@ -7,6 +7,7 @@ import { sendJson, setCacheHeaders } from '../../_lib/response';
 import { notFound, conflict, ErrorCodes } from '../../_lib/errors';
 import { validateBody, journalConfirmPayloadSchema } from '../../_lib/validation';
 import { journalGetById, journalConfirm } from '../../_lib/domain/journal/repo';
+import { toApiJournalEntryV1 } from '../../_lib/domain/journal/mapper';
 import { checkRateLimit } from '../../_lib/rate-limit';
 
 export default createHandler({
@@ -38,6 +39,6 @@ export default createHandler({
     }
     
     setCacheHeaders(res, { noStore: true });
-    sendJson(res, entry);
+    sendJson(res, toApiJournalEntryV1(entry));
   },
 });

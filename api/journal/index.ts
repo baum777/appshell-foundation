@@ -7,16 +7,11 @@ import { createHandler, getQueryParams, getIdempotencyKey } from '../_lib/handle
 import { sendJson, sendCreated, setCacheHeaders } from '../_lib/response';
 import { validateBody, validateQuery, journalListQuerySchema, journalCreateRequestSchema } from '../_lib/validation';
 import { journalList, journalCreate } from '../_lib/domain/journal/repo';
+import { toApiJournalEntryV1, JournalEntryV1 } from '../_lib/domain/journal/mapper';
 import { checkRateLimit } from '../_lib/rate-limit';
 
 interface JournalListResponse {
-  items: Array<{
-    id: string;
-    side: string;
-    status: string;
-    timestamp: string;
-    summary: string;
-  }>;
+  items: JournalEntryV1[];
   nextCursor?: string;
 }
 
@@ -35,7 +30,7 @@ export default createHandler({
     setCacheHeaders(res, { noStore: true });
     
     const response: JournalListResponse = {
-      items: result.items,
+      items: result.items.map(toApiJournalEntryV1),
       nextCursor: result.nextCursor,
     };
     
@@ -52,6 +47,6 @@ export default createHandler({
     const entry = await journalCreate(userId, body, idempotencyKey);
     
     setCacheHeaders(res, { noStore: true });
-    sendCreated(res, entry);
+    sendCreated(res, toApiJournalEntryV1(entry));
   },
 });

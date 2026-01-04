@@ -11,7 +11,7 @@
  */
 
 import { randomUUID } from 'crypto';
-import { kv, kvKeys } from '../../kv';
+import { kv, kvKeys, kvTTL } from '../../kv';
 import type {
   JournalRepo,
   JournalEvent,
@@ -24,6 +24,8 @@ import {
   extractDayKey,
   normalizeStatus,
 } from './types';
+import { sha256Hex } from '../../reasoning/hash';
+import { stableStringify } from '../../reasoning/stableJson';
 
 // ─────────────────────────────────────────────────────────────
 // KV REPOSITORY IMPLEMENTATION
@@ -100,18 +102,30 @@ export async function journalCreate(
 ): Promise<JournalEvent> {
   assertUserId(userId);
   
-  const now = new Date().toISOString();
-  const id = idempotencyKey || `entry-${Date.now()}-${randomUUID().slice(0, 8)}`;
-  const timestamp = request.timestamp || now;
-  const dayKey = extractDayKey(timestamp);
-  
-  // Check idempotency - if entry exists with this id, return it
+  // Check idempotency mapping first
   if (idempotencyKey) {
-    const existing = await journalRepoKV.getEvent(userId, id);
-    if (existing) {
-      return existing;
+    const idemKey = kvKeys.idempotency(userId, `journal:create:${idempotencyKey}`);
+    const cached = await kv.get<{ id: string; hash: string }>(idemKey);
+
+    if (cached) {
+      const currentHash = sha256Hex(stableStringify(request));
+      if (cached.hash !== currentHash) {
+        throw new Error('Idempotency conflict: key reused with different payload');
+      }
+
+      const existing = await journalRepoKV.getEvent(userId, cached.id);
+      if (existing) {
+        return existing;
+      }
+      // If mapped entry is gone, we proceed to create a new one (safer behavior)
     }
   }
+  
+  const now = new Date().toISOString();
+  // Always generate a new ID, do not use idempotencyKey as ID
+  const id = `entry-${Date.now()}-${randomUUID().slice(0, 8)}`;
+  const timestamp = request.timestamp || now;
+  const dayKey = extractDayKey(timestamp);
   
   const event: JournalEvent = {
     id,
@@ -126,6 +140,13 @@ export async function journalCreate(
   };
   
   await journalRepoKV.putEvent(userId, event);
+  
+  // Save idempotency mapping
+  if (idempotencyKey) {
+    const idemKey = kvKeys.idempotency(userId, `journal:create:${idempotencyKey}`);
+    const hash = sha256Hex(stableStringify(request));
+    await kv.set(idemKey, { id, hash }, kvTTL.idempotency);
+  }
   
   // Add to pending index
   const pendingIds = await journalRepoKV.listStatusIds(userId, 'PENDING');

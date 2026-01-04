@@ -7,6 +7,7 @@ import { createHandler } from '../_lib/handler';
 import { sendJson, sendNoContent, setCacheHeaders } from '../_lib/response';
 import { notFound, ErrorCodes } from '../_lib/errors';
 import { journalGetById, journalDelete } from '../_lib/domain/journal/repo';
+import { toApiJournalEntryV1 } from '../_lib/domain/journal/mapper';
 import { checkRateLimit } from '../_lib/rate-limit';
 
 export default createHandler({
@@ -23,7 +24,7 @@ export default createHandler({
     }
     
     setCacheHeaders(res, { noStore: true });
-    sendJson(res, entry);
+    sendJson(res, toApiJournalEntryV1(entry));
   },
   
   DELETE: async ({ req, res, userId }) => {
