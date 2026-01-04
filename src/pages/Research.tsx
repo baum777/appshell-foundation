@@ -10,7 +10,7 @@
  */
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import { useNavigate, useSearchParams, useParams } from "react-router-dom";
+import { useSearchParams, useParams } from "react-router-dom";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { useChartStub, useOracleStub, useJournalStub } from "@/stubs/hooks";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -23,10 +23,7 @@ import { toast } from "@/hooks/use-toast";
 import { isValidChartQuery, normalizeChartQuery, isValidSolanaBase58 } from "@/routes/routes";
 import {
   ChartTopBar,
-  ChartToolbar,
   ChartCanvas,
-  ToolsIndicatorsPanel,
-  ToolsIndicatorsSheet,
   ChartSkeleton,
 } from "@/components/chart";
 import { MarketsBanner } from "@/components/chart/MarketsBanner";
@@ -35,13 +32,17 @@ import { AITAAnalyzerDialog } from "@/components/chart/AITAAnalyzerDialog";
 import { ChartFeedPanel } from "@/components/feed";
 import { GrokPulseCard } from "@/components/grokPulse";
 import {
-  WatchlistHeader,
   WatchlistQuickAdd,
   WatchlistItemRow,
-  WatchlistDetailPanel,
   WatchlistEmptyState,
   type WatchlistQuickAddRef,
 } from "@/components/watchlist";
+import {
+  useResearchToolsStore,
+  DrawingToolbar,
+  ResearchToolsPanel,
+  ResearchToolsSheet,
+} from "@/components/chart/research-tools";
 import type { WatchItemStub } from "@/stubs/contracts";
 
 const WATCHLIST_STORAGE_KEY = "sparkfined_watchlist_v1";
@@ -72,7 +73,6 @@ function saveWatchlist(items: WatchItemStub[]) {
 }
 
 export default function Research() {
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { assetId } = useParams<{ assetId?: string }>();
   const isMobile = useIsMobile();
@@ -104,9 +104,9 @@ export default function Research() {
   const [queryError, setQueryError] = useState<string | null>(null);
   const [toolsSheetOpen, setToolsSheetOpen] = useState(false);
   const [aiAnalyzerOpen, setAiAnalyzerOpen] = useState(false);
-  const [activeTool, setActiveTool] = useState("cursor");
-  const [crosshairEnabled, setCrosshairEnabled] = useState(true);
-  const [enabledIndicators, setEnabledIndicators] = useState<string[]>(["sma"]);
+  
+  // Research tools store (indicators, drawings, Elliott Wave)
+  const toolsStore = useResearchToolsStore();
 
   // Sync watchlist to localStorage
   useEffect(() => {
@@ -222,11 +222,16 @@ export default function Research() {
     [selectedWatchlistSymbol]
   );
 
-  const handleToggleIndicator = useCallback((id: string) => {
-    setEnabledIndicators((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
-    );
-  }, []);
+  // Keyboard shortcut for Escape to cancel Elliott placement
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && toolsStore.elliottPlacement.active) {
+        toolsStore.cancelElliottPlacement();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [toolsStore]);
 
   const handleRetry = () => {
     pageState.setState("loading");
@@ -378,11 +383,16 @@ export default function Research() {
           {/* Center content */}
           <div className="flex-1 space-y-3 min-w-0">
             {!isReplayMode && (
-              <ChartToolbar
-                activeTool={activeTool}
-                onToolChange={setActiveTool}
-                crosshairEnabled={crosshairEnabled}
-                onCrosshairToggle={setCrosshairEnabled}
+              <DrawingToolbar
+                activeTool={toolsStore.activeTool}
+                onToolChange={toolsStore.selectTool}
+                canUndo={toolsStore.canUndo}
+                canRedo={toolsStore.canRedo}
+                onUndo={toolsStore.undo}
+                onRedo={toolsStore.redo}
+                onClear={toolsStore.clearDrawings}
+                hasDrawings={toolsStore.drawings.length > 0}
+                elliottStep={toolsStore.elliottPlacement.active ? toolsStore.elliottPlacement.step : undefined}
               />
             )}
 
@@ -436,9 +446,8 @@ export default function Research() {
           {/* Right panel - Tools/Indicators (desktop, lg+) */}
           {!isMobile && !isReplayMode && (
             <div className="hidden lg:block">
-              <ToolsIndicatorsPanel
-                enabledIndicators={enabledIndicators}
-                onToggleIndicator={handleToggleIndicator}
+              <ResearchToolsPanel
+                store={toolsStore}
                 onOpenAIAnalyzer={() => setAiAnalyzerOpen(true)}
               />
             </div>
@@ -461,11 +470,10 @@ export default function Research() {
       </Sheet>
 
       {/* Mobile tools sheet */}
-      <ToolsIndicatorsSheet
+      <ResearchToolsSheet
         isOpen={toolsSheetOpen}
         onOpenChange={setToolsSheetOpen}
-        enabledIndicators={enabledIndicators}
-        onToggleIndicator={handleToggleIndicator}
+        store={toolsStore}
         onOpenAIAnalyzer={() => {
           setToolsSheetOpen(false);
           setAiAnalyzerOpen(true);
