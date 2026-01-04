@@ -7,6 +7,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getRequestIdFromHeader, setCurrentRequestId, clearRequestId } from './request-id';
 import { handleError, methodNotAllowed } from './errors';
 import { logger } from './logger';
+import { verifyJwtFromAuthHeader } from './auth/jwt';
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
@@ -20,22 +21,18 @@ export interface HandlerContext {
 export type HandlerFunction = (ctx: HandlerContext) => Promise<void>;
 
 export interface RouteConfig {
+  /**
+   * Auth policy for this endpoint.
+   * - 'required': Valid JWT required (default)
+   * - 'none': Public access (userId will be 'anon')
+   */
+  auth?: 'required' | 'none';
+  
   GET?: HandlerFunction;
   POST?: HandlerFunction;
   PUT?: HandlerFunction;
   PATCH?: HandlerFunction;
   DELETE?: HandlerFunction;
-}
-
-function extractUserId(req: VercelRequest): string {
-  const authHeader = req.headers['authorization'];
-  if (typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
-    // In v1, we just use a simple token as user ID
-    // BACKEND_TODO: Implement proper JWT validation
-    const token = authHeader.slice(7);
-    return token || 'anon';
-  }
-  return 'anon';
 }
 
 function setCorsHeaders(res: VercelResponse): void {
@@ -70,7 +67,17 @@ export function createHandler(config: RouteConfig) {
         throw methodNotAllowed(method);
       }
       
-      const userId = extractUserId(req);
+      // Auth logic
+      const authPolicy = config.auth || 'required';
+      let userId = 'anon';
+
+      if (authPolicy === 'required') {
+        const payload = verifyJwtFromAuthHeader(req.headers['authorization']);
+        userId = payload.sub;
+      } else {
+        // auth: 'none'
+        userId = 'anon';
+      }
       
       const ctx: HandlerContext = {
         req,

@@ -81,14 +81,14 @@ describe('LLM Router Integration', () => {
     await expect(routeLLMRequest('reasoning', {
       prompt: 'think',
       timeoutMs: 1000,
-    })).rejects.toThrow('MISSING_DEEPSEEK_KEY');
+    })).rejects.toThrow('DeepSeek API key missing');
   });
 
   it('should throw for Grok Pulse (not implemented)', async () => {
     await expect(routeLLMRequest('grok_pulse', {
       prompt: 'pulse',
       timeoutMs: 1000,
-    })).rejects.toThrow('Grok Pulse not implemented yet');
+    })).rejects.toThrow('MISSING_GROK_KEY');
   });
 });
 

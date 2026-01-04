@@ -17,6 +17,7 @@ interface MetaResponse {
 }
 
 export default createHandler({
+  auth: 'none',
   GET: async ({ res }) => {
     const env = getEnv();
     

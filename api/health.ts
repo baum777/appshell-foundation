@@ -15,6 +15,7 @@ interface HealthResponse {
 }
 
 export default createHandler({
+  auth: 'none',
   GET: async ({ res }) => {
     setCacheHeaders(res, { noStore: true });
     
