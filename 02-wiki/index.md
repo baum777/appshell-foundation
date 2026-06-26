@@ -15,3 +15,15 @@
 [[readme-tool-pipeline-architecture]] | README-Frontdoor mit Tool-, Pipeline- und Architektur-Mermaid-Diagramm | #readme #architecture #pipeline #mermaid | 2026-05-16
 [[terminal-api-jupiter-dns-risk]] | Terminal-API lokal gestartet; Health, Ready und Discover verifiziert; Quote durch Jupiter-DNS `ENOTFOUND` blockiert | #terminal #backend #verification #risk #mspr | 2026-05-21
 [[terminal-chart-candles-provider-decision]] | Fail-closed `/api/chart/candles` Backend-Contract und Frontend-Service implementiert; Live-OHLCV-Provider und ChartPanel-Verbrauch bleiben Review-Gate | #terminal #chart #backend #frontend #verification #mspr | 2026-05-22
+[[ops/agent-team/README]] | 3-Agent-Swarm Governance (OrchestrAI_Labs-Prinzip) als repo-lokale Contract-Slice, additiv zu AGENTS.md/00-schema/AGENTS.md | #governance #swarm #proposed | 2026-06-08
+[[ops/agent-team/swarm_roles]] | Rollendefinition Orchestrator / Builder / Reviewer mit Verantwortung, Modi und Verboten | #governance #swarm #roles #proposed | 2026-06-08
+[[ops/agent-team/swarm_policy]] | Tier-Modell (0-4), immer blockieren / review-pflichtig / freely allowed, sparkfined-spezifische Mappings | #governance #swarm #policy #proposed | 2026-06-08
+[[ops/agent-team/swarm_task_routing]] | Variable Routing-Logik Task-Klasse -> Owner + Tier + Review, mit sparkfined-spezifischen Pfad-Mappings | #governance #swarm #routing #proposed | 2026-06-08
+[[ops/agent-team/swarm_review_gate]] | Review-Gate: pass / needs_rework / blocked / approval_required, Scorecard und Failure-Mode | #governance #swarm #review #proposed | 2026-06-08
+[[ops/agent-team/agent_teamplan]] | Aktive Workstreams mit Owner, Tier, Status, Next Action; additiv zur bestehenden Workstream-Schicht | #governance #swarm #teamplan #proposed | 2026-06-08
+[[ops/agent-team/agent_memory]] | Working / Repo / Semantic Memory in drei Ebenen, additiv zu 02-wiki und 03-mspr | #governance #swarm #memory #proposed | 2026-06-08
+[[ops/agent-team/mspr_logbook]] | MSPR-Logbuch (Memory, Scope, Progress, Review), additiv zu 03-mspr/packets/ | #governance #swarm #mspr #proposed | 2026-06-08
+[[packets/2026-06-08-swarm-governance-bootstrap]] | MSPR-Packet für den Swarm-Governance Bootstrap (governance_bootstrap_review) | #mspr #governance #swarm #proposed | 2026-06-08
+[[ops/agent-team/swarm_roles]] | Erweiterung v1: optionale opt-in Adoption der Shared-Core-Rollenbibliothek (11 Spezialrollen, 5 Presets); 3-Agent-Core bleibt kanonisch | #governance #swarm #roles #proposed | 2026-06-08
+[[ops/agent-team/agent_memory]] | Role-Typed-Memory-Section hinzugefügt (Extended Roles v1) | #governance #swarm #memory #proposed | 2026-06-08
+[[ops/agent-team/mspr_logbook]] | MSPR-20260608-002 (Extended Roles v1 Adoption) hinzugefügt | #governance #swarm #mspr #proposed | 2026-06-08
